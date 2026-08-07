@@ -155,6 +155,10 @@ header.site { position: sticky; top: 0; z-index: 40; background: var(--bg); bord
 
 /* ---------- Category rail ---------- */
 .cat-rail { position: sticky; top: 73px; z-index: 30; background: var(--bg); border-bottom: 2px solid var(--line); padding: 14px 0; }
+.cat-rail-secondary { top: 129px; z-index: 29; background: var(--bg-alt); }
+.price-wrap { display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.price-was { font-size: 0.82rem; color: var(--ink-soft); text-decoration: line-through; }
+.promo-badge { font-size: 0.68rem; font-weight: 700; background: var(--accent-4); color: #fff; padding: 2px 7px; border-radius: 999px; }
 .cat-scroll { display: flex; gap: 10px; overflow-x: auto; padding: 2px 24px; max-width: 1180px; margin: 0 auto; scrollbar-width: thin; }
 .chip { flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; border: 2px solid var(--ink); border-radius: 999px; padding: 9px 16px; font-weight: 700; font-size: 0.88rem; background: var(--panel); color: var(--ink); cursor: pointer; transition: transform 0.12s var(--ease-out), background 0.12s ease, color 0.12s ease; white-space: nowrap; }
 .chip .sw { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background: var(--c, var(--accent)); }
@@ -237,6 +241,11 @@ footer { border-top: 3px solid var(--ink); padding: 34px 24px 40px; background: 
 
 /* ---------- Admin ---------- */
 .admin-main { padding: 32px 0 100px; }
+.tab-row { display: flex; gap: 6px; overflow-x: auto; border-bottom: 2px solid var(--line); margin-bottom: 22px; }
+.tab-btn { flex-shrink: 0; border: none; background: none; padding: 10px 16px; font-weight: 700; font-size: 0.92rem; color: var(--ink-soft); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: color 0.12s ease, border-color 0.12s ease; }
+.tab-btn:hover { color: var(--ink); }
+.tab-btn[aria-selected="true"] { color: var(--ink); border-color: var(--accent); }
+.tab-panel[hidden] { display: none; }
 .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 32px; }
 .stat-tile { background: var(--panel); border: 2px solid var(--line); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow); }
 .stat-tile.warn strong { color: var(--stock-low); }
@@ -282,4 +291,5 @@ select.cell-input { appearance: none; cursor: pointer; }
   .searchbox { max-width: none; }
   .site-bar { flex-wrap: wrap; }
   .cat-rail { top: 0; }
+  .cat-rail-secondary { top: 56px; }
 }

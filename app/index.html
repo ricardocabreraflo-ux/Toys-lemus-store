@@ -17,7 +17,7 @@
     </div>
     <label class="searchbox">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input id="search" type="text" placeholder="Buscar juguetes, marcas, códigos…" autocomplete="off">
+      <input id="search" type="text" placeholder="Buscar productos, marcas, códigos…" autocomplete="off">
     </label>
     <div class="head-actions">
       <button class="icon-btn" id="theme-toggle" aria-label="Cambiar tema" type="button">
@@ -44,13 +44,16 @@
     </div>
     <div class="hero-stats">
       <div><strong id="stat-products">—</strong><span>Productos activos</span></div>
-      <div><strong id="stat-cats">—</strong><span>Categorías</span></div>
+      <div><strong id="stat-cats">—</strong><span>Líneas</span></div>
       <div><strong id="stat-low">—</strong><span>Con 1 pieza disponible</span></div>
     </div>
   </div>
 </section>
 
-<nav class="cat-rail" aria-label="Filtrar por categoría">
+<nav class="cat-rail" aria-label="Filtrar por línea">
+  <div class="cat-scroll" id="line-scroll"></div>
+</nav>
+<nav class="cat-rail cat-rail-secondary" id="cat-rail-secondary" aria-label="Filtrar por categoría" hidden>
   <div class="cat-scroll" id="cat-scroll"></div>
 </nav>
 

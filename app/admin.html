@@ -49,67 +49,247 @@
 <main class="wrap admin-main" id="admin-view" hidden>
   <div class="stat-row">
     <div class="stat-tile"><strong id="stat-total">—</strong><span>Productos</span></div>
-    <div class="stat-tile"><strong id="stat-value">—</strong><span>Valor de inventario</span></div>
-    <div class="stat-tile warn"><strong id="stat-low">—</strong><span>Con 1 pieza</span></div>
-    <div class="stat-tile"><strong id="stat-oos">—</strong><span>Agotados</span></div>
+    <div class="stat-tile"><strong id="stat-value">—</strong><span>Valor de inventario (venta)</span></div>
+    <div class="stat-tile warn"><strong id="stat-low">—</strong><span>Con 1 pieza (online)</span></div>
+    <div class="stat-tile"><strong id="stat-oos">—</strong><span>Agotados (online)</span></div>
   </div>
 
-  <div class="grid-head">
-    <h2>Agregar producto</h2>
-  </div>
-  <form class="add-form" id="add-form">
-    <div class="field">
-      <label for="new-code">Código</label>
-      <input class="cell-input" id="new-code" type="text" placeholder="Opcional">
-    </div>
-    <div class="field" style="grid-column: span 2;">
-      <label for="new-name">Nombre</label>
-      <input class="cell-input" id="new-name" type="text" required>
-    </div>
-    <div class="field">
-      <label for="new-category">Categoría</label>
-      <select class="cell-input" id="new-category" required></select>
-    </div>
-    <div class="field">
-      <label for="new-price">Precio (MXN)</label>
-      <input class="cell-input" id="new-price" type="number" min="0" step="0.01" required>
-    </div>
-    <div class="field">
-      <label for="new-stock">Existencias</label>
-      <input class="cell-input" id="new-stock" type="number" min="0" step="1" required>
-    </div>
-    <div class="submit-cell">
-      <button class="btn btn-primary btn-sm" type="submit">Agregar</button>
-    </div>
-  </form>
-
-  <div class="toolbar">
-    <label class="searchbox">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input id="admin-search" type="text" placeholder="Buscar por nombre o código…" autocomplete="off">
-    </label>
-    <select class="cell-input" id="admin-cat-filter" style="max-width:220px;border-color:var(--line);background:var(--panel);">
-      <option value="all">Todas las categorías</option>
-    </select>
-    <span class="count" id="admin-count" style="margin-left:auto;"></span>
+  <div class="tab-row" role="tablist">
+    <button class="tab-btn" data-tab="inventory" type="button" aria-selected="true">Inventario</button>
+    <button class="tab-btn" data-tab="transfers" type="button" aria-selected="false">Traspasos</button>
+    <button class="tab-btn" data-tab="promotions" type="button" aria-selected="false">Promociones</button>
+    <button class="tab-btn" data-tab="taxonomy" type="button" aria-selected="false">Líneas y categorías</button>
+    <button class="tab-btn" data-tab="reports" type="button" aria-selected="false">Reportes</button>
   </div>
 
-  <div class="table-wrap">
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>Categoría</th>
-          <th>Código</th>
-          <th>Nombre</th>
-          <th>Precio</th>
-          <th>Stock</th>
-          <th></th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="admin-tbody"></tbody>
-    </table>
-  </div>
+  <!-- ---------- Inventario ---------- -->
+  <section class="tab-panel" id="tab-inventory">
+    <div class="grid-head">
+      <h2>Agregar producto</h2>
+    </div>
+    <form class="add-form" id="add-form">
+      <div class="field">
+        <label for="new-line">Línea</label>
+        <select class="cell-input" id="new-line" required></select>
+      </div>
+      <div class="field">
+        <label for="new-category">Categoría</label>
+        <select class="cell-input" id="new-category" required></select>
+      </div>
+      <div class="field">
+        <label for="new-code">Código</label>
+        <input class="cell-input" id="new-code" type="text" placeholder="Opcional">
+      </div>
+      <div class="field" style="grid-column: span 2;">
+        <label for="new-name">Nombre</label>
+        <input class="cell-input" id="new-name" type="text" required>
+      </div>
+      <div class="field">
+        <label for="new-cost">Costo (MXN)</label>
+        <input class="cell-input" id="new-cost" type="number" min="0" step="0.01" required>
+      </div>
+      <div class="field">
+        <label for="new-price">Precio venta (MXN)</label>
+        <input class="cell-input" id="new-price" type="number" min="0" step="0.01" required>
+      </div>
+      <div class="field">
+        <label for="new-stock-online">Stock online</label>
+        <input class="cell-input" id="new-stock-online" type="number" min="0" step="1" value="0" required>
+      </div>
+      <div class="field">
+        <label for="new-stock-fisica">Stock física</label>
+        <input class="cell-input" id="new-stock-fisica" type="number" min="0" step="1" value="0" required>
+      </div>
+      <div class="field" style="justify-content:flex-end;">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;">
+          <input type="checkbox" id="new-published" checked style="width:auto;"> Publicado online
+        </label>
+      </div>
+      <div class="submit-cell">
+        <button class="btn btn-primary btn-sm" type="submit">Agregar</button>
+      </div>
+    </form>
+
+    <div class="toolbar">
+      <label class="searchbox">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="admin-search" type="text" placeholder="Buscar por nombre o código…" autocomplete="off">
+      </label>
+      <select class="cell-input" id="admin-line-filter" style="max-width:200px;border-color:var(--line);background:var(--panel);">
+        <option value="all">Todas las líneas</option>
+      </select>
+      <select class="cell-input" id="admin-cat-filter" style="max-width:200px;border-color:var(--line);background:var(--panel);">
+        <option value="all">Todas las categorías</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;color:var(--ink-soft);">
+        <input type="checkbox" id="admin-published-filter" style="width:auto;"> Solo publicados
+      </label>
+      <span class="count" id="admin-count" style="margin-left:auto;"></span>
+    </div>
+
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Línea / Categoría</th>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Costo</th>
+            <th>Precio</th>
+            <th>Stock online</th>
+            <th>Stock física</th>
+            <th>Publicado</th>
+            <th></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="admin-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- Traspasos ---------- -->
+  <section class="tab-panel" id="tab-transfers" hidden>
+    <div class="grid-head"><h2>Traspasar entre ubicaciones</h2></div>
+    <form class="add-form" id="transfer-form">
+      <div class="field" style="grid-column: span 2;">
+        <label for="tr-product">Producto</label>
+        <select class="cell-input" id="tr-product" required></select>
+      </div>
+      <div class="field">
+        <label for="tr-from">De</label>
+        <select class="cell-input" id="tr-from" required>
+          <option value="online">Online</option>
+          <option value="fisica">Física</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="tr-to">A</label>
+        <select class="cell-input" id="tr-to" required>
+          <option value="fisica">Física</option>
+          <option value="online">Online</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="tr-qty">Cantidad</label>
+        <input class="cell-input" id="tr-qty" type="number" min="1" step="1" required>
+      </div>
+      <div class="field" style="grid-column: span 2;">
+        <label for="tr-note">Nota (opcional)</label>
+        <input class="cell-input" id="tr-note" type="text" placeholder="Ej. reabasto de tienda">
+      </div>
+      <div class="submit-cell">
+        <button class="btn btn-primary btn-sm" type="submit">Traspasar</button>
+      </div>
+    </form>
+    <p class="form-error" id="transfer-error"></p>
+
+    <div class="grid-head"><h2>Historial reciente</h2></div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Fecha</th><th>Producto</th><th>De → A</th><th>Cantidad</th><th>Nota</th></tr></thead>
+        <tbody id="transfers-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- Promociones ---------- -->
+  <section class="tab-panel" id="tab-promotions" hidden>
+    <div class="grid-head"><h2>Nueva promoción</h2></div>
+    <form class="add-form" id="promo-form">
+      <div class="field" style="grid-column: span 2;">
+        <label for="promo-name">Nombre</label>
+        <input class="cell-input" id="promo-name" type="text" required placeholder="Ej. Quincena Shein">
+      </div>
+      <div class="field">
+        <label for="promo-scope-type">Aplica a</label>
+        <select class="cell-input" id="promo-scope-type">
+          <option value="line">Una línea completa</option>
+          <option value="category">Una categoría</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="promo-scope-target">¿Cuál?</label>
+        <select class="cell-input" id="promo-scope-target" required></select>
+      </div>
+      <div class="field">
+        <label for="promo-discount">Descuento %</label>
+        <input class="cell-input" id="promo-discount" type="number" min="1" max="100" step="1" required>
+      </div>
+      <div class="field">
+        <label for="promo-starts">Empieza (opcional)</label>
+        <input class="cell-input" id="promo-starts" type="date">
+      </div>
+      <div class="field">
+        <label for="promo-ends">Termina (opcional)</label>
+        <input class="cell-input" id="promo-ends" type="date">
+      </div>
+      <div class="submit-cell">
+        <button class="btn btn-primary btn-sm" type="submit">Crear promoción</button>
+      </div>
+    </form>
+
+    <div class="grid-head"><h2>Promociones</h2></div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Nombre</th><th>Aplica a</th><th>Descuento</th><th>Vigencia</th><th>Activa</th><th></th></tr></thead>
+        <tbody id="promo-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- Líneas y categorías ---------- -->
+  <section class="tab-panel" id="tab-taxonomy" hidden>
+    <div class="grid-head"><h2>Líneas de producto</h2></div>
+    <form class="add-form" id="line-form" style="grid-template-columns: 1fr auto;">
+      <div class="field"><label for="line-name">Nueva línea</label><input class="cell-input" id="line-name" type="text" placeholder="Ej. Ropa" required></div>
+      <div class="submit-cell"><button class="btn btn-primary btn-sm" type="submit">Agregar</button></div>
+    </form>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Línea</th><th></th></tr></thead>
+        <tbody id="lines-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="grid-head"><h2>Categorías</h2></div>
+    <form class="add-form" id="category-form">
+      <div class="field">
+        <label for="cat-line">Línea</label>
+        <select class="cell-input" id="cat-line" required></select>
+      </div>
+      <div class="field">
+        <label for="cat-name">Nueva categoría</label>
+        <input class="cell-input" id="cat-name" type="text" placeholder="Ej. Fragancias" required>
+      </div>
+      <div class="submit-cell"><button class="btn btn-primary btn-sm" type="submit">Agregar</button></div>
+    </form>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Línea</th><th>Categoría</th><th></th></tr></thead>
+        <tbody id="categories-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- Reportes ---------- -->
+  <section class="tab-panel" id="tab-reports" hidden>
+    <div class="grid-head"><h2>Inventario por línea</h2></div>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Línea</th><th>Productos</th><th>Piezas (online + física)</th><th>Costo total</th><th>Valor de venta</th><th>Ganancia potencial</th></tr></thead>
+        <tbody id="report-lines-tbody"></tbody>
+      </table>
+    </div>
+    <div class="grid-head"><h2>Piezas con 1 disponible o agotadas</h2></div>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Producto</th><th>Línea</th><th>Stock online</th><th>Stock física</th></tr></thead>
+        <tbody id="report-low-tbody"></tbody>
+      </table>
+    </div>
+    <p style="color:var(--ink-soft);font-size:0.9rem;">Los reportes de ventas por mes (cuánto se vendió, ganancia real) van a aparecer aquí una vez que conectemos el punto de venta — por ahora estos números son del inventario actual, no de ventas históricas.</p>
+  </section>
 </main>
 
 <div class="toast" id="toast"></div>
