@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lemus Store — Panel de administrador</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="site-bar">
+    <a class="logo" href="index.html">
+      <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z"/></svg></span>
+      <span>Lemus <span style="color:var(--accent)">Store</span></span>
+    </a>
+    <span class="nav-link" style="border:none;background:var(--bg-alt);">Panel de administrador</span>
+    <div class="head-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="Cambiar tema" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/></svg>
+      </button>
+      <button class="nav-link" id="logout-btn" type="button" hidden>Cerrar sesión</button>
+    </div>
+  </div>
+</header>
+
+<div class="login-wrap" id="login-view">
+  <form class="login-card" id="login-form">
+    <div>
+      <h1>Panel de administrador</h1>
+      <p>Inicia sesión para editar el inventario de Lemus Store.</p>
+    </div>
+    <div class="field">
+      <label for="login-email">Correo</label>
+      <input id="login-email" type="email" required autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="login-password">Contraseña</label>
+      <input id="login-password" type="password" required autocomplete="current-password">
+    </div>
+    <p class="form-error" id="login-error"></p>
+    <button class="btn btn-primary" type="submit" style="justify-content:center;">Entrar</button>
+  </form>
+</div>
+
+<main class="wrap admin-main" id="admin-view" hidden>
+  <div class="stat-row">
+    <div class="stat-tile"><strong id="stat-total">—</strong><span>Productos</span></div>
+    <div class="stat-tile"><strong id="stat-value">—</strong><span>Valor de inventario</span></div>
+    <div class="stat-tile warn"><strong id="stat-low">—</strong><span>Con 1 pieza</span></div>
+    <div class="stat-tile"><strong id="stat-oos">—</strong><span>Agotados</span></div>
+  </div>
+
+  <div class="grid-head">
+    <h2>Agregar producto</h2>
+  </div>
+  <form class="add-form" id="add-form">
+    <div class="field">
+      <label for="new-code">Código</label>
+      <input class="cell-input" id="new-code" type="text" placeholder="Opcional">
+    </div>
+    <div class="field" style="grid-column: span 2;">
+      <label for="new-name">Nombre</label>
+      <input class="cell-input" id="new-name" type="text" required>
+    </div>
+    <div class="field">
+      <label for="new-category">Categoría</label>
+      <select class="cell-input" id="new-category" required></select>
+    </div>
+    <div class="field">
+      <label for="new-price">Precio (MXN)</label>
+      <input class="cell-input" id="new-price" type="number" min="0" step="0.01" required>
+    </div>
+    <div class="field">
+      <label for="new-stock">Existencias</label>
+      <input class="cell-input" id="new-stock" type="number" min="0" step="1" required>
+    </div>
+    <div class="submit-cell">
+      <button class="btn btn-primary btn-sm" type="submit">Agregar</button>
+    </div>
+  </form>
+
+  <div class="toolbar">
+    <label class="searchbox">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="admin-search" type="text" placeholder="Buscar por nombre o código…" autocomplete="off">
+    </label>
+    <select class="cell-input" id="admin-cat-filter" style="max-width:220px;border-color:var(--line);background:var(--panel);">
+      <option value="all">Todas las categorías</option>
+    </select>
+    <span class="count" id="admin-count" style="margin-left:auto;"></span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Categoría</th>
+          <th>Código</th>
+          <th>Nombre</th>
+          <th>Precio</th>
+          <th>Stock</th>
+          <th></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="admin-tbody"></tbody>
+    </table>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="js/admin.js"></script>
+</body>
+</html>

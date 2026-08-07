@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lemus Store — Catálogo</title>
+<meta name="description" content="Catálogo de juguetes Lemus Store, con inventario en vivo.">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="site-bar">
+    <div class="logo">
+      <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z"/></svg></span>
+      <span>Lemus <span style="color:var(--accent)">Store</span></span>
+    </div>
+    <label class="searchbox">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" type="text" placeholder="Buscar juguetes, marcas, códigos…" autocomplete="off">
+    </label>
+    <div class="head-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="Cambiar tema" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/></svg>
+      </button>
+      <button class="icon-btn" id="cart-btn" aria-label="Abrir carrito" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1.4"/><circle cx="18" cy="21" r="1.4"/><path d="M3 3h2.4l2.6 12.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L21 7H6"/></svg>
+        <span class="cart-count" id="cart-count" hidden>0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow"><span class="dot"></span> Inventario en vivo</span>
+    <h1>Juguetes con <span class="hl">chispa</span>,<br>directo del anaquel.</h1>
+    <p class="lede">Muñecas, superhéroes, juegos de mesa y más — catálogo de Lemus Store conectado a nuestro inventario real. Cuando dice "última pieza", es la última pieza.</p>
+    <div class="hero-ctas">
+      <a href="#catalogo" class="btn btn-primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        Ver catálogo
+      </a>
+    </div>
+    <div class="hero-stats">
+      <div><strong id="stat-products">—</strong><span>Productos activos</span></div>
+      <div><strong id="stat-cats">—</strong><span>Categorías</span></div>
+      <div><strong id="stat-low">—</strong><span>Con 1 pieza disponible</span></div>
+    </div>
+  </div>
+</section>
+
+<nav class="cat-rail" aria-label="Filtrar por categoría">
+  <div class="cat-scroll" id="cat-scroll"></div>
+</nav>
+
+<main class="wrap" id="catalogo">
+  <div class="grid-head">
+    <h2 id="section-title">Todo el catálogo</h2>
+    <span class="count" id="result-count"></span>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="empty-state" id="empty-state" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+    <p><strong>Sin resultados.</strong> Prueba con otra palabra o categoría.</p>
+  </div>
+</main>
+
+<footer>
+  <div class="foot-inner">
+    <div class="logo" style="font-size:1.1rem;">
+      <span class="mark" style="width:30px;height:30px;"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M12 3l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z"/></svg></span>
+      Lemus Store
+    </div>
+    <p>Precios en MXN · Sujeto a existencias. <a class="nav-link" href="admin.html" style="margin-left:10px;">Admin</a></p>
+  </div>
+</footer>
+
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer" aria-label="Carrito de compras">
+  <div class="drawer-head">
+    <h2>Tu carrito</h2>
+    <button class="close-btn" id="close-drawer" aria-label="Cerrar carrito" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="drawer-items" id="drawer-items"></div>
+  <div class="drawer-foot">
+    <div class="subtotal-row"><span>Subtotal</span><strong id="subtotal">$0.00</strong></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" id="checkout-btn" type="button">Ir a pagar</button>
+  </div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="js/catalog.js"></script>
+</body>
+</html>
