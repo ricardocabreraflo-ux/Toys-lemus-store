@@ -40,12 +40,39 @@ async function refreshAuthUI() {
   }
 }
 
+let authMode = 'signin';
+const modeToggle = document.getElementById('mode-toggle');
+const loginSubmit = document.getElementById('login-submit');
+modeToggle.addEventListener('click', () => {
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('login-success').textContent = '';
+  if (authMode === 'signup') {
+    loginSubmit.textContent = 'Crear cuenta';
+    modeToggle.textContent = '¿Ya tienes cuenta? Inicia sesión';
+  } else {
+    loginSubmit.textContent = 'Entrar';
+    modeToggle.textContent = '¿Primera vez? Crea tu cuenta';
+  }
+});
+
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
   const errEl = document.getElementById('login-error');
+  const okEl = document.getElementById('login-success');
   errEl.textContent = '';
+  okEl.textContent = '';
+
+  if (authMode === 'signup') {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) { errEl.textContent = error.message; return; }
+    if (data.session) { refreshAuthUI(); return; }
+    okEl.textContent = 'Cuenta creada. Revisa tu correo para confirmar antes de entrar.';
+    return;
+  }
+
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     errEl.textContent = 'No se pudo iniciar sesión. Revisa tu correo y contraseña.';

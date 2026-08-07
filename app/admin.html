@@ -40,7 +40,9 @@
       <input id="login-password" type="password" required autocomplete="current-password">
     </div>
     <p class="form-error" id="login-error"></p>
-    <button class="btn btn-primary" type="submit" style="justify-content:center;">Entrar</button>
+    <p class="form-success" id="login-success" style="color:var(--ok);font-size:0.85rem;min-height:1.2em;margin:0;"></p>
+    <button class="btn btn-primary" type="submit" id="login-submit" style="justify-content:center;">Entrar</button>
+    <button type="button" id="mode-toggle" style="background:none;border:none;color:var(--ink-soft);font-size:0.85rem;text-decoration:underline;cursor:pointer;padding:0;">¿Primera vez? Crea tu cuenta</button>
   </form>
 </div>
 
@@ -112,6 +114,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="js/vendor/supabase.umd.js"></script>
 <script type="module" src="js/admin.js"></script>
 </body>
 </html>
