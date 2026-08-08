@@ -737,6 +737,48 @@ function renderReports() {
     </tr>`).join('') || `<tr><td colspan="4" style="color:var(--ink-soft);">Todo con existencias saludables.</td></tr>`;
 }
 
+async function renderSalesReport() {
+  if (CURRENT_ROLE !== 'admin') return;
+  const { data: sales, error: salesErr } = await supabase
+    .from('sales')
+    .select('id, total, created_at, status')
+    .in('status', ['completada', 'entregado'])
+    .order('created_at', { ascending: false });
+  if (salesErr) { console.error(salesErr); return; }
+
+  const { data: items, error: itemsErr } = await supabase
+    .from('sale_items_view')
+    .select('sale_id, quantity, unit_price, unit_cost_price');
+  if (itemsErr) { console.error(itemsErr); return; }
+
+  const bySale = new Map(items.map(i => [i.sale_id, []]));
+  items.forEach(i => bySale.get(i.sale_id)?.push(i) ?? bySale.set(i.sale_id, [i]));
+
+  const byMonth = new Map(); // 'YYYY-MM' -> { count, pieces, total, cost }
+  sales.forEach(s => {
+    const month = s.created_at.slice(0, 7);
+    const entry = byMonth.get(month) || { count: 0, pieces: 0, total: 0, cost: 0 };
+    entry.count += 1;
+    entry.total += Number(s.total);
+    (bySale.get(s.id) || []).forEach(i => {
+      entry.pieces += i.quantity;
+      entry.cost += (Number(i.unit_cost_price) || 0) * i.quantity;
+    });
+    byMonth.set(month, entry);
+  });
+
+  const rows = [...byMonth.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  document.getElementById('report-sales-tbody').innerHTML = rows.map(([month, r]) => `
+    <tr>
+      <td>${month}</td>
+      <td>${r.count}</td>
+      <td>${r.pieces}</td>
+      <td>${fmt.format(r.total)}</td>
+      <td>${fmt.format(r.cost)}</td>
+      <td>${fmt.format(r.total - r.cost)}</td>
+    </tr>`).join('') || `<tr><td colspan="6" style="color:var(--ink-soft);">Sin ventas todavía.</td></tr>`;
+}
+
 // ---------- Users tab ----------
 
 let VENDEDORES = [];
@@ -832,6 +874,7 @@ async function loadEverything() {
     renderPromotions();
     renderTaxonomy();
     renderReports();
+    await renderSalesReport();
     renderUsers();
     renderOrders();
   } catch (err) {
