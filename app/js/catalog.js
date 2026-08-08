@@ -202,9 +202,47 @@ function closeDrawer() { overlay.classList.remove('open'); drawer.classList.remo
 document.getElementById('cart-btn').addEventListener('click', openDrawer);
 document.getElementById('close-drawer').addEventListener('click', closeDrawer);
 overlay.addEventListener('click', closeDrawer);
-document.getElementById('checkout-btn').addEventListener('click', () => {
+document.getElementById('checkout-btn').addEventListener('click', async () => {
+  const errEl = document.getElementById('checkout-error');
+  errEl.textContent = '';
   if (Object.keys(cart).length === 0) { showToast('Agrega algo antes de pagar'); return; }
-  showToast('Demo — el pago se conectaría aquí');
+
+  const customer_name = document.getElementById('chk-name').value.trim();
+  const customer_phone = document.getElementById('chk-phone').value.trim();
+  const customer_email = document.getElementById('chk-email').value.trim();
+  if (!customer_name || !customer_phone || !customer_email) {
+    errEl.textContent = 'Completa tus datos de contacto.';
+    return;
+  }
+
+  const btn = document.getElementById('checkout-btn');
+  btn.disabled = true;
+  btn.textContent = 'Redirigiendo a pago…';
+
+  const items = Object.entries(cart).map(([product_id, quantity]) => ({ product_id, quantity }));
+  const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+    body: { items, customer_name, customer_phone, customer_email },
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'Ir a pagar';
+
+  if (error || data?.error) {
+    // functions.invoke() doesn't parse the body on non-2xx responses — the
+    // real `{error: "..."}` JSON the Edge Function sent is unread on
+    // error.context (the raw Response). Recover it, falling back to the
+    // generic FunctionsHttpError message if that's not possible.
+    let message = data?.error || error?.message;
+    try {
+      if (error?.context && typeof error.context.json === 'function') {
+        const body = await error.context.json();
+        if (body?.error) message = body.error;
+      }
+    } catch {}
+    errEl.textContent = message || 'No se pudo iniciar el pago';
+    return;
+  }
+  window.location.href = data.url;
 });
 
 document.getElementById('search').addEventListener('input', (e) => { query = e.target.value; render(false); });
@@ -270,7 +308,25 @@ function subscribeRealtime() {
     .subscribe();
 }
 
+function handleCheckoutReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const status = params.get('checkout');
+  if (status === 'success') {
+    Object.keys(cart).forEach(id => delete cart[id]);
+    updateCartUI();
+    showToast('¡Listo! Tu pedido está pagado — pasa a recogerlo a la tienda.');
+  } else if (status === 'cancel') {
+    showToast('Pago cancelado. Tu carrito sigue aquí.');
+  }
+  if (status) {
+    params.delete('checkout');
+    const qs = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+  }
+}
+
 buildHeroFloats();
 updateCartUI();
+handleCheckoutReturn();
 loadAll();
 subscribeRealtime();

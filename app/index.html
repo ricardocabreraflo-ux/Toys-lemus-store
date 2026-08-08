@@ -89,8 +89,13 @@
   </div>
   <div class="drawer-items" id="drawer-items"></div>
   <div class="drawer-foot">
+    <div class="field"><label for="chk-name">Nombre</label><input class="cell-input" id="chk-name" type="text" required></div>
+    <div class="field"><label for="chk-phone">Teléfono</label><input class="cell-input" id="chk-phone" type="tel" required></div>
+    <div class="field"><label for="chk-email">Correo</label><input class="cell-input" id="chk-email" type="email" required></div>
+    <p class="form-error" id="checkout-error"></p>
     <div class="subtotal-row"><span>Subtotal</span><strong id="subtotal">$0.00</strong></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;" id="checkout-btn" type="button">Ir a pagar</button>
+    <p style="color:var(--ink-soft);font-size:0.8rem;margin:6px 0 0;">Recoges tu pedido en tienda — no hacemos envíos por ahora.</p>
   </div>
 </aside>
 
