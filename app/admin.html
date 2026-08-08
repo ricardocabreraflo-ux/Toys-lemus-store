@@ -187,6 +187,24 @@
     <button class="btn btn-primary" type="button" id="sell-confirm-btn" style="margin-top:12px;">Confirmar venta</button>
   </section>
 
+  <!-- ---------- Pedidos en línea ---------- -->
+  <section class="tab-panel" id="tab-orders" hidden>
+    <div class="grid-head"><h2>Pendientes</h2></div>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Fecha</th><th>Cliente</th><th>Teléfono</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="orders-pending-tbody"></tbody>
+      </table>
+    </div>
+    <div class="grid-head"><h2>Entregados</h2></div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Fecha</th><th>Cliente</th><th>Teléfono</th><th>Total</th><th>Entregado</th></tr></thead>
+        <tbody id="orders-delivered-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
   <!-- ---------- Traspasos ---------- -->
   <section class="tab-panel" id="tab-transfers" hidden>
     <div class="grid-head"><h2>Traspasar entre ubicaciones</h2></div>

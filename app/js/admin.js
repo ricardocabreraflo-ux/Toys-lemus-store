@@ -399,6 +399,66 @@ document.getElementById('sell-confirm-btn').addEventListener('click', async () =
   renderStats();
 });
 
+// ---------- Pedidos tab (online orders) ----------
+
+let ORDERS = [];
+
+async function loadOrders() {
+  const { data, error } = await supabase
+    .from('sales')
+    .select('*')
+    .eq('channel', 'online')
+    .order('created_at', { ascending: false });
+  if (error) { console.error(error); return; }
+  ORDERS = data;
+}
+
+function orderStatusLabel(status) {
+  if (status === 'pagado') return 'Pagado — pendiente de recoger';
+  if (status === 'revisar_sin_stock') return 'Revisar — sin stock';
+  return status;
+}
+
+function renderOrders() {
+  const pending = ORDERS.filter(o => o.status === 'pagado' || o.status === 'revisar_sin_stock');
+  const delivered = ORDERS.filter(o => o.status === 'entregado');
+
+  const pendingTbody = document.getElementById('orders-pending-tbody');
+  pendingTbody.innerHTML = pending.length === 0
+    ? `<tr><td colspan="6" style="color:var(--ink-soft);">Sin pedidos pendientes.</td></tr>`
+    : pending.map(o => `
+      <tr data-id="${o.id}" class="${o.status === 'revisar_sin_stock' ? 'low-stock' : ''}">
+        <td>${new Date(o.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+        <td>${escapeHtml(o.customer_name || '—')}</td>
+        <td>${escapeHtml(o.customer_phone || '—')}</td>
+        <td>${fmt.format(o.total)}</td>
+        <td>${orderStatusLabel(o.status)}</td>
+        <td>${o.status === 'pagado' ? `<button class="btn btn-primary btn-sm" type="button" data-role="deliver">Marcar entregado</button>` : ''}</td>
+      </tr>`).join('');
+  pendingTbody.querySelectorAll('[data-role="deliver"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('tr').dataset.id;
+      const { error } = await supabase.rpc('mark_sale_delivered', { p_sale_id: id });
+      if (error) { showToast(error.message, true); return; }
+      showToast('Pedido marcado como entregado');
+      await loadOrders();
+      renderOrders();
+    });
+  });
+
+  const deliveredTbody = document.getElementById('orders-delivered-tbody');
+  deliveredTbody.innerHTML = delivered.length === 0
+    ? `<tr><td colspan="5" style="color:var(--ink-soft);">Sin entregas todavía.</td></tr>`
+    : delivered.map(o => `
+      <tr>
+        <td>${new Date(o.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+        <td>${escapeHtml(o.customer_name || '—')}</td>
+        <td>${escapeHtml(o.customer_phone || '—')}</td>
+        <td>${fmt.format(o.total)}</td>
+        <td>${o.delivered_at ? new Date(o.delivered_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</td>
+      </tr>`).join('');
+}
+
 // ---------- Transfers tab ----------
 
 function refreshTransferProductOptions() {
@@ -757,6 +817,7 @@ async function loadEverything() {
     PROMOTIONS = promos;
     await loadTransfers();
     await loadVendedores();
+    await loadOrders();
 
     initInventoryForm();
     initInventoryFilters();
@@ -772,6 +833,7 @@ async function loadEverything() {
     renderTaxonomy();
     renderReports();
     renderUsers();
+    renderOrders();
   } catch (err) {
     showToast('No se pudo cargar el panel', true);
     console.error(err);
@@ -794,6 +856,7 @@ function subscribeRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'product_lines' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_transfers' }, scheduleReload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, scheduleReload)
     .subscribe();
 }
 
