@@ -4,11 +4,19 @@
 -- traspasos — vendedor only sells and views.
 
 -- --- Cost price masking ---
--- Column-level revoke blocks reading cost_price directly off the base
--- table (including via a REST call that bypasses the app's UI). The view
--- below is the only way anyone reads it — and it nulls it out unless
--- is_admin() is true for the caller.
-revoke select (cost_price) on public.products from anon, authenticated;
+-- A plain column-level revoke doesn't work here: anon/authenticated
+-- already hold table-level SELECT on products from migration 0001, and a
+-- broader table-level grant takes precedence over a narrower column-level
+-- revoke in Postgres (they don't subtract). So the fix is to revoke the
+-- table-level grant entirely and re-grant SELECT column-by-column, leaving
+-- cost_price out — that's what actually blocks it, including via a REST
+-- call that bypasses the app's UI. The view below is the only way anyone
+-- reads cost_price — and it nulls it out unless is_admin() is true.
+revoke select on public.products from anon, authenticated;
+grant select (
+  id, code, name, product_line_id, category_id, price,
+  stock_online, stock_fisica, published_online, created_at, updated_at
+) on public.products to anon, authenticated;
 
 create or replace view public.products_view as
 select
