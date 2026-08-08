@@ -712,8 +712,23 @@ document.getElementById('invite-form').addEventListener('submit', async (e) => {
   if (!email) return;
 
   const { data, error } = await supabase.functions.invoke('invite-vendedor', { body: { email } });
-  if (error || data?.error) {
-    errEl.textContent = data?.error || error.message || 'No se pudo invitar';
+  if (error) {
+    // functions.invoke() doesn't parse the body on non-2xx responses — the
+    // real `{error: "..."}` JSON the Edge Function sent is unread on
+    // error.context (the raw Response). Recover it, falling back to the
+    // generic FunctionsHttpError message if that's not possible.
+    let message = error.message;
+    try {
+      if (error.context && typeof error.context.json === 'function') {
+        const body = await error.context.json();
+        if (body?.error) message = body.error;
+      }
+    } catch {}
+    errEl.textContent = message || 'No se pudo invitar';
+    return;
+  }
+  if (data?.error) {
+    errEl.textContent = data.error;
     return;
   }
   showToast(`Invitación enviada a ${email}`);
