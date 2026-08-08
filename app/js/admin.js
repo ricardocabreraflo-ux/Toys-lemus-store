@@ -74,6 +74,7 @@ async function refreshAuthUI() {
     if (error || !profile) {
       showToast('Tu cuenta no tiene un rol asignado. Contacta al admin.', true);
       await supabase.auth.signOut();
+      CURRENT_ROLE = null;
       loginView.hidden = false;
       adminView.hidden = true;
       logoutBtn.hidden = true;
@@ -170,13 +171,13 @@ function matchesFilters(p) {
   return lineOk && catOk && pubOk && qOk;
 }
 
-function lineCategoryCellHtml(p) {
+function lineCategoryCellHtml(p, dis) {
   const cats = catsForLine(p.product_line_id);
   const lineOpts = LINES.map(l => `<option value="${l.id}" ${l.id === p.product_line_id ? 'selected' : ''}>${escapeHtml(l.name)}</option>`).join('');
   const catOpts = cats.map(c => `<option value="${c.id}" ${c.id === p.category_id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
   return `
-    <select class="cell-input" data-field="product_line_id" style="margin-bottom:4px;">${lineOpts}</select>
-    <select class="cell-input" data-field="category_id">${catOpts}</select>`;
+    <select class="cell-input" data-field="product_line_id" style="margin-bottom:4px;" ${dis}>${lineOpts}</select>
+    <select class="cell-input" data-field="category_id" ${dis}>${catOpts}</select>`;
 }
 
 function rowHtml(p) {
@@ -185,7 +186,7 @@ function rowHtml(p) {
   const dis = readOnly ? 'disabled' : '';
   return `
     <tr data-id="${p.id}" class="${low ? 'low-stock' : ''}">
-      <td style="min-width:180px;">${lineCategoryCellHtml(p)}</td>
+      <td style="min-width:180px;">${lineCategoryCellHtml(p, dis)}</td>
       <td><input class="cell-input" data-field="code" value="${p.code ? escapeHtml(p.code) : ''}" placeholder="—" ${dis}></td>
       <td><input class="cell-input name-input" data-field="name" value="${escapeHtml(p.name)}" ${dis}></td>
       ${CURRENT_ROLE === 'admin' ? `<td><input class="cell-input" data-field="cost_price" type="number" min="0" step="0.01" value="${p.cost_price}"></td>` : ''}
