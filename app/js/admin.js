@@ -329,7 +329,8 @@ function refreshSellProductOptions() {
   if (current && PRODUCTS.some(p => p.id === current)) sel.value = current;
 }
 
-document.getElementById('sell-add-btn').addEventListener('click', () => {
+document.getElementById('sell-add-form').addEventListener('submit', (e) => {
+  e.preventDefault();
   const productId = document.getElementById('sell-product').value;
   const qty = Math.round(Number(document.getElementById('sell-qty').value) || 0);
   if (!productId || qty <= 0) return;
