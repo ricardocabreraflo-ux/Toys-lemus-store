@@ -315,6 +315,89 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
 document.getElementById('admin-search').addEventListener('input', (e) => { query = e.target.value; renderTable(); });
 document.getElementById('admin-published-filter').addEventListener('change', (e) => { publishedOnly = e.target.checked; renderTable(); });
 
+// ---------- Vender tab (POS física) ----------
+
+let SELL_CART = []; // [{ product_id, quantity }]
+
+function refreshSellProductOptions() {
+  const sel = document.getElementById('sell-product');
+  const current = sel.value;
+  sel.innerHTML = PRODUCTS
+    .filter(p => p.stock_fisica > 0)
+    .map(p => `<option value="${p.id}">${p.code ? escapeHtml(p.code) + ' — ' : ''}${escapeHtml(p.name)} (Física: ${p.stock_fisica})</option>`)
+    .join('');
+  if (current && PRODUCTS.some(p => p.id === current)) sel.value = current;
+}
+
+document.getElementById('sell-add-btn').addEventListener('click', () => {
+  const productId = document.getElementById('sell-product').value;
+  const qty = Math.round(Number(document.getElementById('sell-qty').value) || 0);
+  if (!productId || qty <= 0) return;
+  const existing = SELL_CART.find(i => i.product_id === productId);
+  if (existing) existing.quantity += qty;
+  else SELL_CART.push({ product_id: productId, quantity: qty });
+  renderSellCart();
+});
+
+function renderSellCart() {
+  const tbody = document.getElementById('sell-cart-tbody');
+  if (SELL_CART.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="color:var(--ink-soft);">Carrito vacío.</td></tr>`;
+  } else {
+    tbody.innerHTML = SELL_CART.map((item, idx) => {
+      const p = productById(item.product_id);
+      const subtotal = (p?.price || 0) * item.quantity;
+      return `<tr>
+        <td>${escapeHtml(p?.name || '—')}</td>
+        <td>${item.quantity}</td>
+        <td>${fmt.format(p?.price || 0)}</td>
+        <td>${fmt.format(subtotal)}</td>
+        <td><button class="icon-mini danger" type="button" data-idx="${idx}" aria-label="Quitar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button></td>
+      </tr>`;
+    }).join('');
+    tbody.querySelectorAll('button[data-idx]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        SELL_CART.splice(Number(btn.dataset.idx), 1);
+        renderSellCart();
+      });
+    });
+  }
+  const total = SELL_CART.reduce((s, item) => s + (productById(item.product_id)?.price || 0) * item.quantity, 0);
+  document.getElementById('sell-total').textContent = fmt.format(total);
+  updateSellChange();
+}
+
+function updateSellChange() {
+  const total = SELL_CART.reduce((s, item) => s + (productById(item.product_id)?.price || 0) * item.quantity, 0);
+  const cash = Number(document.getElementById('sell-cash').value) || 0;
+  const changeEl = document.getElementById('sell-change');
+  changeEl.textContent = cash > 0 ? `Cambio: ${fmt.format(Math.max(0, cash - total))}` : '';
+}
+document.getElementById('sell-cash').addEventListener('input', updateSellChange);
+
+document.getElementById('sell-confirm-btn').addEventListener('click', async () => {
+  const errEl = document.getElementById('sell-error');
+  errEl.textContent = '';
+  if (SELL_CART.length === 0) { errEl.textContent = 'Agrega al menos un producto.'; return; }
+
+  const { error } = await supabase.rpc('create_sale_fisica', {
+    p_items: SELL_CART.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+  });
+  if (error) { errEl.textContent = error.message; return; }
+
+  showToast('Venta registrada');
+  SELL_CART = [];
+  document.getElementById('sell-cash').value = '';
+  renderSellCart();
+  await reloadProducts();
+  renderTable();
+  refreshSellProductOptions();
+  refreshTransferProductOptions();
+  renderStats();
+});
+
 // ---------- Transfers tab ----------
 
 function refreshTransferProductOptions() {
@@ -664,6 +747,7 @@ async function loadEverything() {
     refreshPromoScopeTarget();
     optionsForLines(document.getElementById('cat-line'));
     refreshTransferProductOptions();
+    refreshSellProductOptions();
 
     renderStats();
     renderTable();

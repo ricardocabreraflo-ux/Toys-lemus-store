@@ -149,6 +149,44 @@
     </div>
   </section>
 
+  <!-- ---------- Vender (POS física) ---------- -->
+  <section class="tab-panel" id="tab-sell" hidden>
+    <div class="grid-head"><h2>Nueva venta en tienda</h2></div>
+    <form class="add-form" id="sell-add-form" style="grid-template-columns: 2fr 1fr auto;">
+      <div class="field">
+        <label for="sell-product">Producto</label>
+        <select class="cell-input" id="sell-product" required></select>
+      </div>
+      <div class="field">
+        <label for="sell-qty">Cantidad</label>
+        <input class="cell-input" id="sell-qty" type="number" min="1" step="1" value="1" required>
+      </div>
+      <div class="submit-cell"><button class="btn btn-primary btn-sm" type="button" id="sell-add-btn">Agregar</button></div>
+    </form>
+
+    <div class="table-wrap" style="margin-top:16px;">
+      <table class="admin-table">
+        <thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th><th></th></tr></thead>
+        <tbody id="sell-cart-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="stat-row" style="margin-top:16px;">
+      <div class="stat-tile"><strong id="sell-total">$0.00</strong><span>Total</span></div>
+    </div>
+    <div class="add-form" style="grid-template-columns: 1fr auto; margin-top:12px;">
+      <div class="field">
+        <label for="sell-cash">Efectivo recibido (opcional, solo para calcular cambio)</label>
+        <input class="cell-input" id="sell-cash" type="number" min="0" step="0.01">
+      </div>
+      <div class="submit-cell" style="align-items:flex-end;">
+        <span id="sell-change" style="color:var(--ink-soft);font-size:0.9rem;"></span>
+      </div>
+    </div>
+    <p class="form-error" id="sell-error"></p>
+    <button class="btn btn-primary" type="button" id="sell-confirm-btn" style="margin-top:12px;">Confirmar venta</button>
+  </section>
+
   <!-- ---------- Traspasos ---------- -->
   <section class="tab-panel" id="tab-transfers" hidden>
     <div class="grid-head"><h2>Traspasar entre ubicaciones</h2></div>
