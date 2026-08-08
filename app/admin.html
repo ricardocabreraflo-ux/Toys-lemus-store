@@ -291,6 +291,27 @@
     </div>
     <p style="color:var(--ink-soft);font-size:0.9rem;">Los reportes de ventas por mes (cuánto se vendió, ganancia real) van a aparecer aquí una vez que conectemos el punto de venta — por ahora estos números son del inventario actual, no de ventas históricas.</p>
   </section>
+
+  <!-- ---------- Usuarios ---------- -->
+  <section class="tab-panel" id="tab-users" hidden>
+    <div class="grid-head"><h2>Invitar vendedor</h2></div>
+    <form class="add-form" id="invite-form" style="grid-template-columns: 1fr auto;">
+      <div class="field">
+        <label for="invite-email">Correo del vendedor</label>
+        <input class="cell-input" id="invite-email" type="email" required placeholder="empleado@correo.com">
+      </div>
+      <div class="submit-cell"><button class="btn btn-primary btn-sm" type="submit">Invitar</button></div>
+    </form>
+    <p class="form-error" id="invite-error"></p>
+
+    <div class="grid-head"><h2>Vendedores</h2></div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Correo</th><th>Invitado</th></tr></thead>
+        <tbody id="users-tbody"></tbody>
+      </table>
+    </div>
+  </section>
 </main>
 
 <div class="toast" id="toast"></div>

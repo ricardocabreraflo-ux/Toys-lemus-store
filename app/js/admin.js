@@ -593,6 +593,52 @@ function renderReports() {
     </tr>`).join('') || `<tr><td colspan="4" style="color:var(--ink-soft);">Todo con existencias saludables.</td></tr>`;
 }
 
+// ---------- Users tab ----------
+
+let VENDEDORES = [];
+
+async function loadVendedores() {
+  if (CURRENT_ROLE !== 'admin') return;
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('role', 'vendedor')
+    .order('created_at', { ascending: false });
+  if (error) { console.error(error); return; }
+  VENDEDORES = data;
+}
+
+function renderUsers() {
+  const tbody = document.getElementById('users-tbody');
+  if (VENDEDORES.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="2" style="color:var(--ink-soft);">Sin vendedores todavía.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = VENDEDORES.map(v => `
+    <tr>
+      <td>${escapeHtml(v.email)}</td>
+      <td>${new Date(v.created_at).toLocaleDateString('es-MX')}</td>
+    </tr>`).join('');
+}
+
+document.getElementById('invite-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errEl = document.getElementById('invite-error');
+  errEl.textContent = '';
+  const email = document.getElementById('invite-email').value.trim();
+  if (!email) return;
+
+  const { data, error } = await supabase.functions.invoke('invite-vendedor', { body: { email } });
+  if (error || data?.error) {
+    errEl.textContent = data?.error || error.message || 'No se pudo invitar';
+    return;
+  }
+  showToast(`Invitación enviada a ${email}`);
+  e.target.reset();
+  await loadVendedores();
+  renderUsers();
+});
+
 // ---------- Load & realtime ----------
 
 async function reloadProducts() {
@@ -611,6 +657,7 @@ async function loadEverything() {
     if (promoErr) throw promoErr;
     PROMOTIONS = promos;
     await loadTransfers();
+    await loadVendedores();
 
     initInventoryForm();
     initInventoryFilters();
@@ -624,6 +671,7 @@ async function loadEverything() {
     renderPromotions();
     renderTaxonomy();
     renderReports();
+    renderUsers();
   } catch (err) {
     showToast('No se pudo cargar el panel', true);
     console.error(err);
