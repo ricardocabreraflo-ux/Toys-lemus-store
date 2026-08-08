@@ -41,18 +41,26 @@ Deno.serve(async (req) => {
       .in('id', ids);
     if (prodErr) throw prodErr;
 
-    const lineItems = [];
+    // Aggregate quantities per product_id to prevent overselling
+    const qtyMap = new Map<string, number>();
     for (const item of items) {
-      const p = products.find((x: { id: string }) => x.id === item.product_id);
       const qty = Number(item.quantity) || 0;
+      const current = qtyMap.get(item.product_id) ?? 0;
+      qtyMap.set(item.product_id, current + qty);
+    }
+
+    // Validate and build line items from aggregated quantities
+    const lineItems = [];
+    for (const [productId, totalQty] of qtyMap.entries()) {
+      const p = products.find((x: { id: string }) => x.id === productId);
       if (!p || !p.published_online) {
         return json({ error: 'Un producto de tu carrito ya no está disponible.' }, 409);
       }
-      if (qty <= 0 || qty > p.stock_online) {
+      if (totalQty <= 0 || totalQty > p.stock_online) {
         return json({ error: `Solo quedan ${p.stock_online} de "${p.name}" — actualiza tu carrito.` }, 409);
       }
       lineItems.push({
-        quantity: qty,
+        quantity: totalQty,
         price_data: {
           currency: 'mxn',
           unit_amount: Math.round(p.price * 100),
@@ -62,7 +70,7 @@ Deno.serve(async (req) => {
     }
 
     const cartMetadata = JSON.stringify(
-      items.map((i: { product_id: string; quantity: number }) => ({ product_id: i.product_id, quantity: i.quantity }))
+      Array.from(qtyMap.entries()).map(([productId, totalQty]) => ({ product_id: productId, quantity: totalQty }))
     );
     if (cartMetadata.length > 500) {
       return json({ error: 'Carrito con demasiados productos distintos para procesar de una vez.' }, 400);
