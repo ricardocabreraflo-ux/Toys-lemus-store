@@ -16,8 +16,20 @@ let CURRENT_ROLE = null; // 'admin' | 'vendedor'
 initThemeToggle();
 
 const loginView = document.getElementById('login-view');
+const setPasswordView = document.getElementById('set-password-view');
 const adminView = document.getElementById('admin-view');
 const logoutBtn = document.getElementById('logout-btn');
+
+// Invite/recovery links land here with the session token in the URL hash
+// (e.g. #access_token=...&type=invite). supabase-js's client establishes
+// the session from it automatically, but there's no built-in "set your
+// password" screen — this app has to provide one before letting the
+// person into the normal admin flow.
+let isInviteFlow = (() => {
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+  const type = hashParams.get('type');
+  return type === 'invite' || type === 'recovery';
+})();
 
 const lineById = (id) => LINES.find(l => l.id === id);
 const catById = (id) => CATEGORIES.find(c => c.id === id);
@@ -65,6 +77,16 @@ function applyRoleVisibility() {
 
 async function refreshAuthUI() {
   const { data: { session } } = await supabase.auth.getSession();
+
+  if (session && isInviteFlow) {
+    loginView.hidden = true;
+    adminView.hidden = true;
+    setPasswordView.hidden = false;
+    logoutBtn.hidden = true;
+    return;
+  }
+  setPasswordView.hidden = true;
+
   if (session) {
     const { data: profile, error } = await supabase
       .from('profiles')
@@ -94,6 +116,21 @@ async function refreshAuthUI() {
     logoutBtn.hidden = true;
   }
 }
+
+document.getElementById('set-password-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const password = document.getElementById('new-password').value;
+  const errEl = document.getElementById('set-password-error');
+  errEl.textContent = '';
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) { errEl.textContent = error.message; return; }
+
+  isInviteFlow = false;
+  history.replaceState({}, '', window.location.pathname);
+  showToast('Contraseña guardada');
+  refreshAuthUI();
+});
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();

@@ -44,6 +44,21 @@
   </form>
 </div>
 
+<div class="login-wrap" id="set-password-view" hidden>
+  <form class="login-card" id="set-password-form">
+    <div>
+      <h1>Bienvenido a Lemus Store</h1>
+      <p>Antes de entrar, elige tu contraseña.</p>
+    </div>
+    <div class="field">
+      <label for="new-password">Contraseña</label>
+      <input id="new-password" type="password" required minlength="6" autocomplete="new-password">
+    </div>
+    <p class="form-error" id="set-password-error"></p>
+    <button class="btn btn-primary" type="submit" style="justify-content:center;">Guardar y entrar</button>
+  </form>
+</div>
+
 <main class="wrap admin-main" id="admin-view" hidden>
   <div class="stat-row">
     <div class="stat-tile"><strong id="stat-total">—</strong><span>Productos</span></div>

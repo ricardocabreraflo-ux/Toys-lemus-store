@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const SITE_URL = Deno.env.get('SITE_URL') ?? 'https://lemus-store.netlify.app';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -42,7 +43,9 @@ Deno.serve(async (req) => {
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-    const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email);
+    const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${SITE_URL}/admin.html`,
+    });
     if (inviteErr) return json({ error: inviteErr.message }, 400);
 
     const { error: profileErr } = await admin
