@@ -40,9 +40,7 @@
       <input id="login-password" type="password" required autocomplete="current-password">
     </div>
     <p class="form-error" id="login-error"></p>
-    <p class="form-success" id="login-success" style="color:var(--ok);font-size:0.85rem;min-height:1.2em;margin:0;"></p>
     <button class="btn btn-primary" type="submit" id="login-submit" style="justify-content:center;">Entrar</button>
-    <button type="button" id="mode-toggle" style="background:none;border:none;color:var(--ink-soft);font-size:0.85rem;text-decoration:underline;cursor:pointer;padding:0;">¿Primera vez? Crea tu cuenta</button>
   </form>
 </div>
 
@@ -55,11 +53,14 @@
   </div>
 
   <div class="tab-row" role="tablist">
-    <button class="tab-btn" data-tab="inventory" type="button" aria-selected="true">Inventario</button>
-    <button class="tab-btn" data-tab="transfers" type="button" aria-selected="false">Traspasos</button>
-    <button class="tab-btn" data-tab="promotions" type="button" aria-selected="false">Promociones</button>
-    <button class="tab-btn" data-tab="taxonomy" type="button" aria-selected="false">Líneas y categorías</button>
-    <button class="tab-btn" data-tab="reports" type="button" aria-selected="false">Reportes</button>
+    <button class="tab-btn" data-tab="inventory" type="button" aria-selected="true" data-role-admin data-role-vendedor>Inventario</button>
+    <button class="tab-btn" data-tab="sell" type="button" aria-selected="false" data-role-admin data-role-vendedor>Vender</button>
+    <button class="tab-btn" data-tab="orders" type="button" aria-selected="false" data-role-admin data-role-vendedor>Pedidos</button>
+    <button class="tab-btn" data-tab="transfers" type="button" aria-selected="false" data-role-admin>Traspasos</button>
+    <button class="tab-btn" data-tab="promotions" type="button" aria-selected="false" data-role-admin>Promociones</button>
+    <button class="tab-btn" data-tab="taxonomy" type="button" aria-selected="false" data-role-admin>Líneas y categorías</button>
+    <button class="tab-btn" data-tab="reports" type="button" aria-selected="false" data-role-admin>Reportes</button>
+    <button class="tab-btn" data-tab="users" type="button" aria-selected="false" data-role-admin>Usuarios</button>
   </div>
 
   <!-- ---------- Inventario ---------- -->
@@ -134,7 +135,7 @@
             <th>Línea / Categoría</th>
             <th>Código</th>
             <th>Nombre</th>
-            <th>Costo</th>
+            <th id="col-cost-header">Costo</th>
             <th>Precio</th>
             <th>Stock online</th>
             <th>Stock física</th>

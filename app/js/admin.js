@@ -11,6 +11,7 @@ let query = '';
 let lineFilter = 'all';
 let catFilter = 'all';
 let publishedOnly = false;
+let CURRENT_ROLE = null; // 'admin' | 'vendedor'
 
 initThemeToggle();
 
@@ -48,55 +49,57 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   });
 });
 
+function applyRoleVisibility() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    const allowed = btn.hasAttribute(`data-role-${CURRENT_ROLE}`);
+    btn.hidden = !allowed;
+  });
+  const activeBtn = document.querySelector('.tab-btn[aria-selected="true"]');
+  if (!activeBtn || activeBtn.hidden) {
+    const firstVisible = document.querySelector('.tab-btn:not([hidden])');
+    if (firstVisible) firstVisible.click();
+  }
+}
+
 // ---------- Auth ----------
 
 async function refreshAuthUI() {
   const { data: { session } } = await supabase.auth.getSession();
   if (session) {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+    if (error || !profile) {
+      showToast('Tu cuenta no tiene un rol asignado. Contacta al admin.', true);
+      await supabase.auth.signOut();
+      loginView.hidden = false;
+      adminView.hidden = true;
+      logoutBtn.hidden = true;
+      return;
+    }
+    CURRENT_ROLE = profile.role;
     loginView.hidden = true;
     adminView.hidden = false;
     logoutBtn.hidden = false;
+    applyRoleVisibility();
     await loadEverything();
     subscribeRealtime();
   } else {
+    CURRENT_ROLE = null;
     loginView.hidden = false;
     adminView.hidden = true;
     logoutBtn.hidden = true;
   }
 }
 
-let authMode = 'signin';
-const modeToggle = document.getElementById('mode-toggle');
-const loginSubmit = document.getElementById('login-submit');
-modeToggle.addEventListener('click', () => {
-  authMode = authMode === 'signin' ? 'signup' : 'signin';
-  document.getElementById('login-error').textContent = '';
-  document.getElementById('login-success').textContent = '';
-  if (authMode === 'signup') {
-    loginSubmit.textContent = 'Crear cuenta';
-    modeToggle.textContent = '¿Ya tienes cuenta? Inicia sesión';
-  } else {
-    loginSubmit.textContent = 'Entrar';
-    modeToggle.textContent = '¿Primera vez? Crea tu cuenta';
-  }
-});
-
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
   const errEl = document.getElementById('login-error');
-  const okEl = document.getElementById('login-success');
   errEl.textContent = '';
-  okEl.textContent = '';
-
-  if (authMode === 'signup') {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) { errEl.textContent = error.message; return; }
-    if (data.session) { refreshAuthUI(); return; }
-    okEl.textContent = 'Cuenta creada. Revisa tu correo para confirmar antes de entrar.';
-    return;
-  }
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
@@ -178,26 +181,30 @@ function lineCategoryCellHtml(p) {
 
 function rowHtml(p) {
   const low = p.stock_online <= 1 || p.stock_fisica <= 1;
+  const readOnly = CURRENT_ROLE !== 'admin';
+  const dis = readOnly ? 'disabled' : '';
   return `
     <tr data-id="${p.id}" class="${low ? 'low-stock' : ''}">
       <td style="min-width:180px;">${lineCategoryCellHtml(p)}</td>
-      <td><input class="cell-input" data-field="code" value="${p.code ? escapeHtml(p.code) : ''}" placeholder="—"></td>
-      <td><input class="cell-input name-input" data-field="name" value="${escapeHtml(p.name)}"></td>
-      <td><input class="cell-input" data-field="cost_price" type="number" min="0" step="0.01" value="${p.cost_price}"></td>
-      <td><input class="cell-input" data-field="price" type="number" min="0" step="0.01" value="${p.price}"></td>
-      <td><input class="cell-input" data-field="stock_online" type="number" min="0" step="1" value="${p.stock_online}"></td>
-      <td><input class="cell-input" data-field="stock_fisica" type="number" min="0" step="1" value="${p.stock_fisica}"></td>
-      <td style="text-align:center;"><input type="checkbox" data-field="published_online" ${p.published_online ? 'checked' : ''}></td>
+      <td><input class="cell-input" data-field="code" value="${p.code ? escapeHtml(p.code) : ''}" placeholder="—" ${dis}></td>
+      <td><input class="cell-input name-input" data-field="name" value="${escapeHtml(p.name)}" ${dis}></td>
+      ${CURRENT_ROLE === 'admin' ? `<td><input class="cell-input" data-field="cost_price" type="number" min="0" step="0.01" value="${p.cost_price}"></td>` : ''}
+      <td><input class="cell-input" data-field="price" type="number" min="0" step="0.01" value="${p.price}" ${dis}></td>
+      <td><input class="cell-input" data-field="stock_online" type="number" min="0" step="1" value="${p.stock_online}" ${dis}></td>
+      <td><input class="cell-input" data-field="stock_fisica" type="number" min="0" step="1" value="${p.stock_fisica}" ${dis}></td>
+      <td style="text-align:center;"><input type="checkbox" data-field="published_online" ${p.published_online ? 'checked' : ''} ${dis}></td>
       <td><span class="save-pill" data-role="save-pill">Guardado</span></td>
       <td>
-        <button class="icon-mini danger" data-role="delete" type="button" aria-label="Eliminar ${escapeHtml(p.name)}">
+        ${CURRENT_ROLE === 'admin' ? `<button class="icon-mini danger" data-role="delete" type="button" aria-label="Eliminar ${escapeHtml(p.name)}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
-        </button>
+        </button>` : ''}
       </td>
     </tr>`;
 }
 
 function renderTable() {
+  document.getElementById('col-cost-header').hidden = CURRENT_ROLE !== 'admin';
+  document.getElementById('add-form').hidden = CURRENT_ROLE !== 'admin';
   const tbody = document.getElementById('admin-tbody');
   const focused = document.activeElement;
   const focusedRow = focused && focused.closest ? focused.closest('tr[data-id]') : null;
@@ -290,9 +297,10 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
 
   const { data, error } = await supabase.from('products')
     .insert({ code, name, product_line_id, category_id, cost_price, price, stock_online, stock_fisica, published_online })
-    .select().single();
+    .select('id, code, name, product_line_id, category_id, price, stock_online, stock_fisica, published_online, created_at, updated_at')
+    .single();
   if (error) { showToast('No se pudo agregar el producto', true); console.error(error); return; }
-  PRODUCTS.push(data);
+  PRODUCTS.push({ ...data, cost_price });
   renderStats();
   renderTable();
   refreshTransferProductOptions();
@@ -587,7 +595,7 @@ function renderReports() {
 // ---------- Load & realtime ----------
 
 async function reloadProducts() {
-  const { data, error } = await supabase.from('products').select('*').order('name');
+  const { data, error } = await supabase.from('products_view').select('*').order('name');
   if (error) { console.error(error); return; }
   PRODUCTS = data;
 }

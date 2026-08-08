@@ -243,7 +243,7 @@ async function loadAll() {
       loadProductLines(),
       loadCategories(),
       loadActivePromotions(),
-      supabase.from('products').select('*').eq('published_online', true).order('name'),
+      supabase.from('products_view').select('*').eq('published_online', true).order('name'),
     ]);
     if (productsRes.error) throw productsRes.error;
     LINES = lines;
