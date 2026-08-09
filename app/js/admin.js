@@ -242,6 +242,7 @@ function rowHtml(p) {
 
 function renderTable() {
   document.getElementById('col-cost-header').hidden = CURRENT_ROLE !== 'admin';
+  document.getElementById('add-product-heading').hidden = CURRENT_ROLE !== 'admin';
   document.getElementById('add-form').hidden = CURRENT_ROLE !== 'admin';
   const tbody = document.getElementById('admin-tbody');
   const focused = document.activeElement;
