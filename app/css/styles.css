@@ -284,6 +284,7 @@ select.cell-input { appearance: none; cursor: pointer; }
 .field input:focus { outline: none; border-color: var(--accent); }
 .form-error { color: var(--stock-low); font-size: 0.85rem; min-height: 1.2em; }
 .add-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; background: var(--panel); border: 2px solid var(--line); border-radius: 16px; padding: 18px; margin-bottom: 18px; box-shadow: var(--shadow); }
+.add-form[hidden] { display: none; }
 .add-form .field { grid-column: span 1; }
 .add-form .submit-cell { display: flex; align-items: flex-end; }
 
