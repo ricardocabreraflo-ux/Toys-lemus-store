@@ -37,9 +37,30 @@ Deno.serve(async (req) => {
     const ids = items.map((i: { product_id: string }) => i.product_id);
     const { data: products, error: prodErr } = await supabase
       .from('products')
-      .select('id, name, price, stock_online, published_online')
+      .select('id, name, price, stock_online, published_online, product_line_id, category_id')
       .in('id', ids);
     if (prodErr) throw prodErr;
+
+    const nowIso = new Date().toISOString();
+    const { data: promotions, error: promoErr } = await supabase
+      .from('promotions')
+      .select('*')
+      .eq('active', true)
+      .or(`starts_at.is.null,starts_at.lte.${nowIso}`)
+      .or(`ends_at.is.null,ends_at.gte.${nowIso}`);
+    if (promoErr) throw promoErr;
+
+    // Same "best active promotion" logic as app/js/catalog-data.js, kept in
+    // sync manually since Edge Functions can't import frontend modules.
+    function discountedPrice(p: { price: number; product_line_id: string | null; category_id: string | null }) {
+      const matches = (promotions ?? []).filter((promo: { scope_type: string; product_line_id: string | null; category_id: string | null; discount_percent: number }) =>
+        (promo.scope_type === 'line' && promo.product_line_id === p.product_line_id) ||
+        (promo.scope_type === 'category' && promo.category_id === p.category_id)
+      );
+      if (matches.length === 0) return p.price;
+      const best = matches.reduce((a, b) => (b.discount_percent > a.discount_percent ? b : a), matches[0]);
+      return Math.round(p.price * (1 - best.discount_percent / 100) * 100) / 100;
+    }
 
     // Aggregate quantities per product_id to prevent overselling
     const qtyMap = new Map<string, number>();
@@ -51,6 +72,7 @@ Deno.serve(async (req) => {
 
     // Validate and build line items from aggregated quantities
     const lineItems = [];
+    const cartItems = [];
     for (const [productId, totalQty] of qtyMap.entries()) {
       const p = products.find((x: { id: string }) => x.id === productId);
       if (!p || !p.published_online) {
@@ -59,19 +81,19 @@ Deno.serve(async (req) => {
       if (totalQty <= 0 || totalQty > p.stock_online) {
         return json({ error: `Solo quedan ${p.stock_online} de "${p.name}" — actualiza tu carrito.` }, 409);
       }
+      const unitPrice = discountedPrice(p);
       lineItems.push({
         quantity: totalQty,
         price_data: {
           currency: 'mxn',
-          unit_amount: Math.round(p.price * 100),
+          unit_amount: Math.round(unitPrice * 100),
           product_data: { name: p.name },
         },
       });
+      cartItems.push({ product_id: productId, quantity: totalQty, unit_price: unitPrice });
     }
 
-    const cartMetadata = JSON.stringify(
-      Array.from(qtyMap.entries()).map(([productId, totalQty]) => ({ product_id: productId, quantity: totalQty }))
-    );
+    const cartMetadata = JSON.stringify(cartItems);
     if (cartMetadata.length > 500) {
       return json({ error: 'Carrito con demasiados productos distintos para procesar de una vez.' }, 400);
     }

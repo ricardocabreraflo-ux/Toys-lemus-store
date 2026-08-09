@@ -416,25 +416,31 @@ function updateSellChange() {
 }
 document.getElementById('sell-cash').addEventListener('input', updateSellChange);
 
-document.getElementById('sell-confirm-btn').addEventListener('click', async () => {
+document.getElementById('sell-confirm-btn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
   const errEl = document.getElementById('sell-error');
   errEl.textContent = '';
   if (SELL_CART.length === 0) { errEl.textContent = 'Agrega al menos un producto.'; return; }
 
-  const { error } = await supabase.rpc('create_sale_fisica', {
-    p_items: SELL_CART.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
-  });
-  if (error) { errEl.textContent = error.message; return; }
+  btn.disabled = true;
+  try {
+    const { error } = await supabase.rpc('create_sale_fisica', {
+      p_items: SELL_CART.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+    });
+    if (error) { errEl.textContent = error.message; return; }
 
-  showToast('Venta registrada');
-  SELL_CART = [];
-  document.getElementById('sell-cash').value = '';
-  renderSellCart();
-  await reloadProducts();
-  renderTable();
-  refreshSellProductOptions();
-  refreshTransferProductOptions();
-  renderStats();
+    showToast('Venta registrada');
+    SELL_CART = [];
+    document.getElementById('sell-cash').value = '';
+    renderSellCart();
+    await reloadProducts();
+    renderTable();
+    refreshSellProductOptions();
+    refreshTransferProductOptions();
+    renderStats();
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 // ---------- Pedidos tab (online orders) ----------
@@ -471,7 +477,7 @@ function renderOrders() {
         <td>${escapeHtml(o.customer_phone || '—')}</td>
         <td>${fmt.format(o.total)}</td>
         <td>${orderStatusLabel(o.status)}</td>
-        <td>${o.status === 'pagado' ? `<button class="btn btn-primary btn-sm" type="button" data-role="deliver">Marcar entregado</button>` : ''}</td>
+        <td>${(o.status === 'pagado' || o.status === 'revisar_sin_stock') ? `<button class="btn btn-primary btn-sm" type="button" data-role="deliver">Marcar entregado</button>` : ''}</td>
       </tr>`).join('');
   pendingTbody.querySelectorAll('[data-role="deliver"]').forEach(btn => {
     btn.addEventListener('click', async () => {
