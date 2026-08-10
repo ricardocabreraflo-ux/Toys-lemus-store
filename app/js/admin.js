@@ -611,8 +611,13 @@ function layawayPaidSoFar(l) {
   return (l.layaway_payments || []).reduce((s, p) => s + Number(p.amount), 0);
 }
 
+function layawayDueDate(l) {
+  const [y, m, d] = String(l.due_date).split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 function layawayIsOverdue(l) {
-  return new Date(l.due_date) < new Date(new Date().toDateString());
+  return layawayDueDate(l) < new Date(new Date().toDateString());
 }
 
 function layawayStatusLabel(l) {
@@ -634,7 +639,7 @@ function renderLayaways() {
       const pending = Number(l.total) - paid;
       const flagged = layawayIsOverdue(l) || l.status === 'revisar_sin_stock';
       return `<tr data-id="${l.id}" class="${flagged ? 'low-stock' : ''}">
-        <td>${new Date(l.due_date).toLocaleDateString('es-MX', { dateStyle: 'medium' })}</td>
+        <td>${layawayDueDate(l).toLocaleDateString('es-MX', { dateStyle: 'medium' })}</td>
         <td>${escapeHtml(l.customer_name)}</td>
         <td>${escapeHtml(l.customer_phone)}</td>
         <td>${fmt.format(l.total)}</td>
@@ -715,7 +720,7 @@ function renderLayaways() {
     ? `<tr><td colspan="4" style="color:var(--ink-soft);">Sin historial todavía.</td></tr>`
     : history.map(l => `
       <tr>
-        <td>${new Date(l.due_date).toLocaleDateString('es-MX', { dateStyle: 'medium' })}</td>
+        <td>${layawayDueDate(l).toLocaleDateString('es-MX', { dateStyle: 'medium' })}</td>
         <td>${escapeHtml(l.customer_name)}</td>
         <td>${fmt.format(l.total)}</td>
         <td>${l.status === 'completado' ? 'Completado' : 'Cancelado'}</td>
