@@ -503,6 +503,225 @@ function renderOrders() {
       </tr>`).join('');
 }
 
+// ---------- Apartados tab ----------
+
+let LAYAWAY_CART = []; // [{ product_id, quantity }]
+let LAYAWAYS = [];
+
+function refreshLayawayProductOptions() {
+  const sel = document.getElementById('layaway-product');
+  const current = sel.value;
+  sel.innerHTML = PRODUCTS
+    .filter(p => p.stock_fisica > 0)
+    .map(p => `<option value="${p.id}">${p.code ? escapeHtml(p.code) + ' — ' : ''}${escapeHtml(p.name)} (Física: ${p.stock_fisica})</option>`)
+    .join('');
+  if (current && PRODUCTS.some(p => p.id === current)) sel.value = current;
+}
+
+document.getElementById('layaway-add-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const productId = document.getElementById('layaway-product').value;
+  const qty = Math.round(Number(document.getElementById('layaway-qty').value) || 0);
+  if (!productId || qty <= 0) return;
+  const existing = LAYAWAY_CART.find(i => i.product_id === productId);
+  if (existing) existing.quantity += qty;
+  else LAYAWAY_CART.push({ product_id: productId, quantity: qty });
+  renderLayawayCart();
+});
+
+function renderLayawayCart() {
+  const tbody = document.getElementById('layaway-cart-tbody');
+  if (LAYAWAY_CART.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="color:var(--ink-soft);">Carrito vacío.</td></tr>`;
+  } else {
+    tbody.innerHTML = LAYAWAY_CART.map((item, idx) => {
+      const p = productById(item.product_id);
+      const subtotal = (p?.price || 0) * item.quantity;
+      return `<tr>
+        <td>${escapeHtml(p?.name || '—')}</td>
+        <td>${item.quantity}</td>
+        <td>${fmt.format(p?.price || 0)}</td>
+        <td>${fmt.format(subtotal)}</td>
+        <td><button class="icon-mini danger" type="button" data-idx="${idx}" aria-label="Quitar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button></td>
+      </tr>`;
+    }).join('');
+    tbody.querySelectorAll('button[data-idx]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        LAYAWAY_CART.splice(Number(btn.dataset.idx), 1);
+        renderLayawayCart();
+      });
+    });
+  }
+  const total = LAYAWAY_CART.reduce((s, item) => s + (productById(item.product_id)?.price || 0) * item.quantity, 0);
+  document.getElementById('layaway-total').textContent = fmt.format(total);
+  document.getElementById('layaway-deposit').textContent = fmt.format(total * 0.5);
+}
+
+document.getElementById('layaway-confirm-btn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const errEl = document.getElementById('layaway-error');
+  errEl.textContent = '';
+  if (LAYAWAY_CART.length === 0) { errEl.textContent = 'Agrega al menos un producto.'; return; }
+  const customer_name = document.getElementById('layaway-name').value.trim();
+  const customer_phone = document.getElementById('layaway-phone').value.trim();
+  const customer_email = document.getElementById('layaway-email').value.trim();
+  if (!customer_name || !customer_phone) { errEl.textContent = 'Captura nombre y teléfono del cliente.'; return; }
+
+  btn.disabled = true;
+  try {
+    const { error } = await supabase.rpc('create_layaway_fisica', {
+      p_items: LAYAWAY_CART.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+      p_customer_name: customer_name,
+      p_customer_phone: customer_phone,
+      p_customer_email: customer_email || null,
+    });
+    if (error) { errEl.textContent = error.message; return; }
+
+    showToast('Apartado registrado');
+    LAYAWAY_CART = [];
+    document.getElementById('layaway-name').value = '';
+    document.getElementById('layaway-phone').value = '';
+    document.getElementById('layaway-email').value = '';
+    renderLayawayCart();
+    await reloadProducts();
+    renderTable();
+    refreshSellProductOptions();
+    refreshTransferProductOptions();
+    refreshLayawayProductOptions();
+    renderStats();
+    await loadLayaways();
+    renderLayaways();
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+async function loadLayaways() {
+  const { data, error } = await supabase
+    .from('layaways')
+    .select('*, layaway_payments(amount)')
+    .order('due_date', { ascending: true });
+  if (error) { console.error(error); return; }
+  LAYAWAYS = data;
+}
+
+function layawayPaidSoFar(l) {
+  return (l.layaway_payments || []).reduce((s, p) => s + Number(p.amount), 0);
+}
+
+function layawayIsOverdue(l) {
+  return new Date(l.due_date) < new Date(new Date().toDateString());
+}
+
+function layawayStatusLabel(l) {
+  if (l.status === 'revisar_sin_stock') return 'Revisar — sin stock';
+  if (l.status === 'completado') return 'Completado';
+  if (l.status === 'cancelado') return 'Cancelado';
+  return layawayIsOverdue(l) ? 'Activo — vencido' : 'Activo';
+}
+
+function renderLayaways() {
+  const active = LAYAWAYS.filter(l => l.status === 'activo' || l.status === 'revisar_sin_stock');
+  const history = LAYAWAYS.filter(l => l.status === 'completado' || l.status === 'cancelado');
+
+  const activeTbody = document.getElementById('layaways-active-tbody');
+  activeTbody.innerHTML = active.length === 0
+    ? `<tr><td colspan="8" style="color:var(--ink-soft);">Sin apartados activos.</td></tr>`
+    : active.map(l => {
+      const paid = layawayPaidSoFar(l);
+      const pending = Number(l.total) - paid;
+      const flagged = layawayIsOverdue(l) || l.status === 'revisar_sin_stock';
+      return `<tr data-id="${l.id}" class="${flagged ? 'low-stock' : ''}">
+        <td>${new Date(l.due_date).toLocaleDateString('es-MX', { dateStyle: 'medium' })}</td>
+        <td>${escapeHtml(l.customer_name)}</td>
+        <td>${escapeHtml(l.customer_phone)}</td>
+        <td>${fmt.format(l.total)}</td>
+        <td>${fmt.format(paid)}</td>
+        <td>${fmt.format(pending)}</td>
+        <td>${layawayStatusLabel(l)}</td>
+        <td>
+          <button class="btn btn-primary btn-sm" type="button" data-role="abono">Abonar</button>
+          <button class="btn btn-sm" type="button" data-role="extend">Extender</button>
+          <button class="btn btn-danger btn-sm" type="button" data-role="cancel">Cancelar</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+  activeTbody.querySelectorAll('[data-role="abono"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('tr').dataset.id;
+      const raw = window.prompt('Monto del abono en efectivo:');
+      if (raw === null) return;
+      const amount = Number(raw);
+      if (!amount || amount <= 0) { showToast('Monto inválido', true); return; }
+      btn.disabled = true;
+      try {
+        const { error } = await supabase.rpc('record_layaway_abono', { p_layaway_id: id, p_amount: amount });
+        if (error) { showToast(error.message, true); return; }
+        showToast('Abono registrado');
+        await loadLayaways();
+        renderLayaways();
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  activeTbody.querySelectorAll('[data-role="extend"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('tr').dataset.id;
+      const raw = window.prompt('Nueva fecha límite (AAAA-MM-DD):');
+      if (raw === null || !raw.trim()) return;
+      btn.disabled = true;
+      try {
+        const { error } = await supabase.rpc('extend_layaway_due_date', { p_layaway_id: id, p_new_due_date: raw.trim() });
+        if (error) { showToast(error.message, true); return; }
+        showToast('Fecha actualizada');
+        await loadLayaways();
+        renderLayaways();
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  activeTbody.querySelectorAll('[data-role="cancel"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('tr').dataset.id;
+      if (!window.confirm('¿Cancelar este apartado? Se libera el stock reservado.')) return;
+      btn.disabled = true;
+      try {
+        const { error } = await supabase.rpc('cancel_layaway', { p_layaway_id: id });
+        if (error) { showToast(error.message, true); return; }
+        showToast('Apartado cancelado');
+        await reloadProducts();
+        renderTable();
+        refreshSellProductOptions();
+        refreshTransferProductOptions();
+        refreshLayawayProductOptions();
+        renderStats();
+        await loadLayaways();
+        renderLayaways();
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  const historyTbody = document.getElementById('layaways-history-tbody');
+  historyTbody.innerHTML = history.length === 0
+    ? `<tr><td colspan="4" style="color:var(--ink-soft);">Sin historial todavía.</td></tr>`
+    : history.map(l => `
+      <tr>
+        <td>${new Date(l.due_date).toLocaleDateString('es-MX', { dateStyle: 'medium' })}</td>
+        <td>${escapeHtml(l.customer_name)}</td>
+        <td>${fmt.format(l.total)}</td>
+        <td>${l.status === 'completado' ? 'Completado' : 'Cancelado'}</td>
+      </tr>`).join('');
+}
+
 // ---------- Transfers tab ----------
 
 function refreshTransferProductOptions() {
@@ -904,6 +1123,7 @@ async function loadEverything() {
     await loadTransfers();
     await loadVendedores();
     await loadOrders();
+    await loadLayaways();
 
     initInventoryForm();
     initInventoryFilters();
@@ -911,6 +1131,7 @@ async function loadEverything() {
     optionsForLines(document.getElementById('cat-line'));
     refreshTransferProductOptions();
     refreshSellProductOptions();
+    refreshLayawayProductOptions();
 
     renderStats();
     renderTable();
@@ -921,6 +1142,7 @@ async function loadEverything() {
     await renderSalesReport();
     renderUsers();
     renderOrders();
+    renderLayaways();
   } catch (err) {
     showToast('No se pudo cargar el panel', true);
     console.error(err);
@@ -944,6 +1166,8 @@ function subscribeRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_transfers' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, scheduleReload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'layaways' }, scheduleReload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'layaway_payments' }, scheduleReload)
     .subscribe();
 }
 
