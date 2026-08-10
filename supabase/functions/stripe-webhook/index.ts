@@ -25,6 +25,23 @@ Deno.serve(async (req) => {
     const meta = session.metadata!;
     const items = JSON.parse(meta.cart);
 
+    if (meta.kind === 'layaway_deposit') {
+      const { error } = await supabase.rpc('record_online_layaway_deposit', {
+        p_stripe_checkout_session_id: session.id,
+        p_customer_name: meta.customer_name,
+        p_customer_phone: meta.customer_phone,
+        p_customer_email: meta.customer_email,
+        p_total: Number(meta.total),
+        p_deposit_amount: Number(meta.deposit_amount),
+        p_items: items,
+      });
+      if (error) {
+        console.error('record_online_layaway_deposit failed', error);
+        return new Response('Error al registrar el apartado', { status: 500 });
+      }
+      return new Response('ok', { status: 200 });
+    }
+
     const { error } = await supabase.rpc('record_online_sale', {
       p_stripe_checkout_session_id: session.id,
       p_stripe_payment_intent_id: (session.payment_intent as string) ?? null,
