@@ -245,6 +245,45 @@ document.getElementById('checkout-btn').addEventListener('click', async () => {
   window.location.href = data.url;
 });
 
+document.getElementById('layaway-btn').addEventListener('click', async () => {
+  const errEl = document.getElementById('checkout-error');
+  errEl.textContent = '';
+  if (Object.keys(cart).length === 0) { showToast('Agrega algo antes de apartar'); return; }
+
+  const customer_name = document.getElementById('chk-name').value.trim();
+  const customer_phone = document.getElementById('chk-phone').value.trim();
+  const customer_email = document.getElementById('chk-email').value.trim();
+  if (!customer_name || !customer_phone || !customer_email) {
+    errEl.textContent = 'Completa tus datos de contacto.';
+    return;
+  }
+
+  const btn = document.getElementById('layaway-btn');
+  btn.disabled = true;
+  btn.textContent = 'Redirigiendo a pago…';
+
+  const items = Object.entries(cart).map(([product_id, quantity]) => ({ product_id, quantity }));
+  const { data, error } = await supabase.functions.invoke('create-layaway-checkout-session', {
+    body: { items, customer_name, customer_phone, customer_email },
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'Apartar (paga 50% ahora)';
+
+  if (error || data?.error) {
+    let message = data?.error || error?.message;
+    try {
+      if (error?.context && typeof error.context.json === 'function') {
+        const body = await error.context.json();
+        if (body?.error) message = body.error;
+      }
+    } catch {}
+    errEl.textContent = message || 'No se pudo iniciar el apartado';
+    return;
+  }
+  window.location.href = data.url;
+});
+
 document.getElementById('search').addEventListener('input', (e) => { query = e.target.value; render(false); });
 
 function buildHeroFloats() {
@@ -311,15 +350,23 @@ function subscribeRealtime() {
 function handleCheckoutReturn() {
   const params = new URLSearchParams(window.location.search);
   const status = params.get('checkout');
+  const apartadoStatus = params.get('apartado');
   if (status === 'success') {
     Object.keys(cart).forEach(id => delete cart[id]);
     updateCartUI();
     showToast('¡Listo! Tu pedido está pagado — pasa a recogerlo a la tienda.');
   } else if (status === 'cancel') {
     showToast('Pago cancelado. Tu carrito sigue aquí.');
+  } else if (apartadoStatus === 'success') {
+    Object.keys(cart).forEach(id => delete cart[id]);
+    updateCartUI();
+    showToast('¡Listo! Tu apartado quedó registrado — paga el resto en tienda en efectivo antes de la fecha límite.');
+  } else if (apartadoStatus === 'cancel') {
+    showToast('Apartado cancelado. Tu carrito sigue aquí.');
   }
-  if (status) {
+  if (status || apartadoStatus) {
     params.delete('checkout');
+    params.delete('apartado');
     const qs = params.toString();
     window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
   }
