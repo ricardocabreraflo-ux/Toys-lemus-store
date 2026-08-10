@@ -41,10 +41,20 @@ begin
     raise exception 'Nombre y teléfono del cliente son obligatorios';
   end if;
 
-  -- First pass: lock every row and validate stock before writing anything,
-  -- same all-or-nothing approach as create_sale_fisica/transfer_stock.
+  insert into public.layaways (
+    channel, status, customer_name, customer_phone, customer_email,
+    total, deposit_percent, due_date, created_by
+  ) values (
+    'fisica', 'activo', p_customer_name, p_customer_phone, nullif(p_customer_email, ''),
+    0, 50, current_date + 15, auth.uid()
+  ) returning id into v_layaway_id;
+
   for v_item in select * from jsonb_to_recordset(p_items) as x(product_id uuid, quantity integer)
   loop
+    if v_item.quantity is null or v_item.quantity <= 0 then
+      raise exception 'Cantidad inválida';
+    end if;
+
     select stock_fisica, price, cost_price, name
       into v_stock, v_price, v_cost, v_name
       from public.products where id = v_item.product_id for update;
@@ -56,28 +66,15 @@ begin
       raise exception 'Solo hay % disponibles de "%"', v_stock, v_name;
     end if;
 
-    v_total := v_total + v_price * v_item.quantity;
-  end loop;
-
-  insert into public.layaways (
-    channel, status, customer_name, customer_phone, customer_email,
-    total, deposit_percent, due_date, created_by
-  ) values (
-    'fisica', 'activo', p_customer_name, p_customer_phone, nullif(p_customer_email, ''),
-    v_total, 50, current_date + 15, auth.uid()
-  ) returning id into v_layaway_id;
-
-  for v_item in select * from jsonb_to_recordset(p_items) as x(product_id uuid, quantity integer)
-  loop
-    select stock_fisica, price, cost_price, name
-      into v_stock, v_price, v_cost, v_name
-      from public.products where id = v_item.product_id for update;
-
     update public.products set stock_fisica = stock_fisica - v_item.quantity where id = v_item.product_id;
 
     insert into public.layaway_items (layaway_id, product_id, product_name, quantity, unit_price, unit_cost_price)
     values (v_layaway_id, v_item.product_id, v_name, v_item.quantity, v_price, v_cost);
+
+    v_total := v_total + v_price * v_item.quantity;
   end loop;
+
+  update public.layaways set total = v_total where id = v_layaway_id;
 
   insert into public.layaway_payments (layaway_id, amount, method, created_by)
   values (v_layaway_id, round(v_total * 0.5, 2), 'efectivo', auth.uid());
