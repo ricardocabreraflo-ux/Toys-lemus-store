@@ -1,12 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import Stripe from 'npm:stripe@17';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY')!;
+const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')!;
 const SITE_URL = Deno.env.get('SITE_URL') ?? 'https://lemus-store.netlify.app';
 
-const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' });
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 const CORS_HEADERS = {
@@ -50,8 +48,7 @@ Deno.serve(async (req) => {
       .or(`ends_at.is.null,ends_at.gte.${nowIso}`);
     if (promoErr) throw promoErr;
 
-    // Same "best active promotion" logic as app/js/catalog-data.js, kept in
-    // sync manually since Edge Functions can't import frontend modules.
+    // Same "best active promotion" logic as app/js/catalog-data.js.
     function discountedPrice(p: { price: number; product_line_id: string | null; category_id: string | null }) {
       const matches = (promotions ?? []).filter((promo: { scope_type: string; product_line_id: string | null; category_id: string | null; discount_percent: number }) =>
         (promo.scope_type === 'line' && promo.product_line_id === p.product_line_id) ||
@@ -62,7 +59,7 @@ Deno.serve(async (req) => {
       return Math.round(p.price * (1 - best.discount_percent / 100) * 100) / 100;
     }
 
-    // Aggregate quantities per product_id to prevent overselling
+    // Aggregate quantities per product_id to prevent overselling.
     const qtyMap = new Map<string, number>();
     for (const item of items) {
       const qty = Number(item.quantity) || 0;
@@ -70,8 +67,7 @@ Deno.serve(async (req) => {
       qtyMap.set(item.product_id, current + qty);
     }
 
-    // Validate and build line items from aggregated quantities
-    const lineItems = [];
+    const mpItems = [];
     const cartItems = [];
     for (const [productId, totalQty] of qtyMap.entries()) {
       const p = products.find((x: { id: string }) => x.id === productId);
@@ -82,32 +78,57 @@ Deno.serve(async (req) => {
         return json({ error: `Solo quedan ${p.stock_online} de "${p.name}" — actualiza tu carrito.` }, 409);
       }
       const unitPrice = discountedPrice(p);
-      lineItems.push({
+      mpItems.push({
+        title: p.name,
         quantity: totalQty,
-        price_data: {
-          currency: 'mxn',
-          unit_amount: Math.round(unitPrice * 100),
-          product_data: { name: p.name },
-        },
+        unit_price: unitPrice,
+        currency_id: 'MXN',
       });
       cartItems.push({ product_id: productId, quantity: totalQty, unit_price: unitPrice });
     }
 
-    const cartMetadata = JSON.stringify(cartItems);
-    if (cartMetadata.length > 500) {
-      return json({ error: 'Carrito con demasiados productos distintos para procesar de una vez.' }, 400);
+    const { data: pending, error: pendingErr } = await supabase
+      .from('pending_checkouts')
+      .insert({
+        kind: 'venta',
+        payload: { items: cartItems, customer_name, customer_phone, customer_email },
+      })
+      .select('id')
+      .single();
+    if (pendingErr) throw pendingErr;
+
+    const mpRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        items: mpItems,
+        payer: { email: customer_email },
+        back_urls: {
+          success: `${SITE_URL}/index.html?checkout=success`,
+          failure: `${SITE_URL}/index.html?checkout=cancel`,
+          pending: `${SITE_URL}/index.html?checkout=cancel`,
+        },
+        auto_return: 'approved',
+        notification_url: `${SUPABASE_URL}/functions/v1/mercadopago-webhook`,
+        external_reference: pending.id,
+        payment_methods: {
+          excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }],
+        },
+      }),
+    });
+    const mpData = await mpRes.json();
+    if (!mpRes.ok) {
+      console.error('Mercado Pago preference error', mpData);
+      return json({ error: 'No se pudo iniciar el pago' }, 500);
     }
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      line_items: lineItems,
-      success_url: `${SITE_URL}/index.html?checkout=success`,
-      cancel_url: `${SITE_URL}/index.html?checkout=cancel`,
-      customer_email,
-      metadata: { cart: cartMetadata, customer_name, customer_phone, customer_email },
-    });
+    const isTestMode = MP_ACCESS_TOKEN.startsWith('TEST-');
+    const checkoutUrl = isTestMode ? mpData.sandbox_init_point : mpData.init_point;
 
-    return json({ url: session.url });
+    return json({ url: checkoutUrl });
   } catch (err) {
     return json({ error: String(err) }, 500);
   }
