@@ -1,13 +1,11 @@
 // supabase/functions/create-layaway-checkout-session/index.ts
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import Stripe from 'npm:stripe@17';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY')!;
+const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')!;
 const SITE_URL = Deno.env.get('SITE_URL') ?? 'https://lemus-store.netlify.app';
 
-const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' });
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 const DEPOSIT_PERCENT = 50;
@@ -53,9 +51,6 @@ Deno.serve(async (req) => {
       .or(`ends_at.is.null,ends_at.gte.${nowIso}`);
     if (promoErr) throw promoErr;
 
-    // Same "best active promotion" logic as app/js/catalog-data.js and
-    // create-checkout-session, kept in sync manually since Edge Functions
-    // can't import frontend modules.
     function discountedPrice(p: { price: number; product_line_id: string | null; category_id: string | null }) {
       const matches = (promotions ?? []).filter((promo: { scope_type: string; product_line_id: string | null; category_id: string | null; discount_percent: number }) =>
         (promo.scope_type === 'line' && promo.product_line_id === p.product_line_id) ||
@@ -91,36 +86,53 @@ Deno.serve(async (req) => {
     total = Math.round(total * 100) / 100;
     const depositAmount = Math.round(total * (DEPOSIT_PERCENT / 100) * 100) / 100;
 
-    const cartMetadata = JSON.stringify(cartItems);
-    if (cartMetadata.length > 500) {
-      return json({ error: 'Carrito con demasiados productos distintos para procesar de una vez.' }, 400);
+    const { data: pending, error: pendingErr } = await supabase
+      .from('pending_checkouts')
+      .insert({
+        kind: 'apartado',
+        payload: { items: cartItems, customer_name, customer_phone, customer_email, total, deposit_amount: depositAmount },
+      })
+      .select('id')
+      .single();
+    if (pendingErr) throw pendingErr;
+
+    const mpRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        items: [{
+          title: `Anticipo de apartado (${DEPOSIT_PERCENT}% de $${total.toFixed(2)})`,
+          quantity: 1,
+          unit_price: depositAmount,
+          currency_id: 'MXN',
+        }],
+        payer: { email: customer_email },
+        back_urls: {
+          success: `${SITE_URL}/index.html?apartado=success`,
+          failure: `${SITE_URL}/index.html?apartado=cancel`,
+          pending: `${SITE_URL}/index.html?apartado=cancel`,
+        },
+        auto_return: 'approved',
+        notification_url: `${SUPABASE_URL}/functions/v1/mercadopago-webhook`,
+        external_reference: pending.id,
+        payment_methods: {
+          excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }],
+        },
+      }),
+    });
+    const mpData = await mpRes.json();
+    if (!mpRes.ok) {
+      console.error('Mercado Pago preference error', mpData);
+      return json({ error: 'No se pudo iniciar el apartado' }, 500);
     }
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      line_items: [{
-        quantity: 1,
-        price_data: {
-          currency: 'mxn',
-          unit_amount: Math.round(depositAmount * 100),
-          product_data: { name: `Anticipo de apartado (${DEPOSIT_PERCENT}% de $${total.toFixed(2)})` },
-        },
-      }],
-      success_url: `${SITE_URL}/index.html?apartado=success`,
-      cancel_url: `${SITE_URL}/index.html?apartado=cancel`,
-      customer_email,
-      metadata: {
-        kind: 'layaway_deposit',
-        cart: cartMetadata,
-        customer_name,
-        customer_phone,
-        customer_email,
-        total: total.toFixed(2),
-        deposit_amount: depositAmount.toFixed(2),
-      },
-    });
+    const isTestMode = MP_ACCESS_TOKEN.startsWith('TEST-');
+    const checkoutUrl = isTestMode ? mpData.sandbox_init_point : mpData.init_point;
 
-    return json({ url: session.url });
+    return json({ url: checkoutUrl });
   } catch (err) {
     return json({ error: String(err) }, 500);
   }
