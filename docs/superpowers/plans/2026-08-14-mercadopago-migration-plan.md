@@ -147,7 +147,10 @@ git add supabase/migrations/0016_mercadopago_pending_checkouts.sql
 git commit -m "Add pending_checkouts table and rename Stripe-specific columns for Mercado Pago"
 ```
 
-Report this task as **pending manual application**.
+Report this task as **pending manual application**. **Important:** do not
+run this migration alone against the live database — it must be applied
+together with migration 0017 (Task 2), in the same SQL Editor sitting. See
+Task 6 Step 1 for why.
 
 - [ ] **Step 3 (controller, after Ricardo confirms he ran it): Verify**
 
@@ -962,7 +965,16 @@ Ricardo's Supabase/Mercado Pago dashboards).
 
 - [ ] **Step 1: Confirm every piece from Tasks 1-5 is live**
 
-- Migrations 0016, 0017 applied (Task 1/2 Step 3 verifications pass).
+- **Migrations 0016 and 0017 must be pasted into the Supabase SQL Editor
+  and run together, as a single execution, in the same sitting — never
+  apply 0016 alone and leave 0017 for later.** Migration 0016 renames
+  columns (`stripe_checkout_session_id` -> `payment_id`) that the
+  currently-live `record_online_sale`/`record_online_layaway_deposit`
+  (from migration 0015) still reference by their old names. If 0016 lands
+  without 0017 in the same sitting, every webhook call against the live
+  online-checkout flow starts failing with a "column does not exist" error
+  until 0017 also lands. Confirm both migrations applied (Task 1/2 Step 3
+  verifications pass) before moving on.
 - `create-checkout-session` and `create-layaway-checkout-session`
   redeployed with the new Mercado Pago code (Task 3/4 Step 3 verifications
   pass), with `MP_ACCESS_TOKEN` (test token) set as a secret on both.
@@ -971,6 +983,10 @@ Ricardo's Supabase/Mercado Pago dashboards).
 
 - [ ] **Step 2: Decommission Stripe**
 
+- Do this **before** running the combined 0016+0017 SQL from Step 1, not
+  after — otherwise there's a window where a stale/retried Stripe webhook
+  delivery could hit `stripe-webhook` code that references columns the
+  migration has already renamed away.
 - In Supabase Dashboard → Edge Functions: delete or disable the old
   `stripe-webhook` function.
 - In Stripe's Dashboard → Developers → Webhooks: delete the webhook
