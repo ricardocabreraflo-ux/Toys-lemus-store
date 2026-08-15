@@ -85,6 +85,11 @@ Deno.serve(async (req) => {
   }
 
   const pendingId = payment.external_reference;
+  if (!pendingId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(pendingId))) {
+    console.log('Pago sin external_reference propio (probablemente actividad de la cuenta ajena al catálogo)', dataId);
+    return new Response('ok', { status: 200 });
+  }
+
   const { data: pending, error: pendingErr } = await supabase
     .from('pending_checkouts')
     .select('*')
@@ -97,6 +102,9 @@ Deno.serve(async (req) => {
   }
   if (!pending) {
     console.error('pending_checkouts no encontrado para external_reference', pendingId);
+    return new Response('ok', { status: 200 });
+  }
+  if (pending.status === 'confirmado') {
     return new Response('ok', { status: 200 });
   }
 

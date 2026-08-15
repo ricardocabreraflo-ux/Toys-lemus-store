@@ -10,8 +10,13 @@
 -- Postgres (identity = name + argument types) — the old 6-arg overload must
 -- be dropped explicitly, `create or replace` alone would just add a second
 -- overload instead of replacing it. record_online_layaway_deposit keeps the
--- same 7-argument shape (only a parameter NAME changed), so a plain
--- `create or replace` is enough for it.
+-- same 7-argument TYPE shape, but its first parameter's NAME also changes
+-- (p_stripe_checkout_session_id -> p_payment_id) — Postgres explicitly
+-- forbids renaming a parameter via `create or replace function` ("It is not
+-- possible to change the name of a function or of any argument using
+-- CREATE OR REPLACE FUNCTION; to do that, use ALTER FUNCTION", per the
+-- Postgres docs), so it needs the same drop-then-create treatment as
+-- record_online_sale even though only the name (not the types) changed.
 
 drop function if exists public.record_online_sale(text, text, text, text, text, jsonb);
 
@@ -97,6 +102,8 @@ $$;
 
 revoke all on function public.record_online_sale(text, text, text, text, jsonb) from public, anon, authenticated;
 grant execute on function public.record_online_sale(text, text, text, text, jsonb) to service_role;
+
+drop function if exists public.record_online_layaway_deposit(text, text, text, text, numeric, numeric, jsonb);
 
 create or replace function public.record_online_layaway_deposit(
   p_payment_id text,
@@ -190,3 +197,5 @@ $$;
 
 revoke all on function public.record_online_layaway_deposit(text, text, text, text, numeric, numeric, jsonb) from public, anon, authenticated;
 grant execute on function public.record_online_layaway_deposit(text, text, text, text, numeric, numeric, jsonb) to service_role;
+
+notify pgrst, 'reload schema';

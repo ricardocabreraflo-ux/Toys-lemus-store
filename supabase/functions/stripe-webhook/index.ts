@@ -1,3 +1,4 @@
+// REEMPLAZADA por mercadopago-webhook — no desplegar esta función. Se conserva solo como referencia histórica.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'npm:stripe@17';
 

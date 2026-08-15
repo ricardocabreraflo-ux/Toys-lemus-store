@@ -126,7 +126,11 @@ Deno.serve(async (req) => {
     }
 
     const isTestMode = MP_ACCESS_TOKEN.startsWith('TEST-');
-    const checkoutUrl = isTestMode ? mpData.sandbox_init_point : mpData.init_point;
+    const checkoutUrl = (isTestMode ? mpData.sandbox_init_point : null) ?? mpData.init_point;
+    if (!checkoutUrl) {
+      console.error('Mercado Pago no devolvió una URL de pago', mpData);
+      return json({ error: 'No se pudo iniciar el pago' }, 500);
+    }
 
     return json({ url: checkoutUrl });
   } catch (err) {
