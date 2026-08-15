@@ -71,8 +71,12 @@ Deno.serve(async (req) => {
     headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` },
   });
   if (!paymentRes.ok) {
-    console.error('No se pudo consultar el pago', dataId, await paymentRes.text());
-    return new Response('ok', { status: 200 });
+    const bodyText = await paymentRes.text();
+    console.error('No se pudo consultar el pago', dataId, paymentRes.status, bodyText);
+    if (paymentRes.status === 404) {
+      return new Response('ok', { status: 200 });
+    }
+    return new Response('Error al consultar el pago', { status: 500 });
   }
   const payment = await paymentRes.json();
 
@@ -87,7 +91,11 @@ Deno.serve(async (req) => {
     .eq('id', pendingId)
     .single();
 
-  if (pendingErr || !pending) {
+  if (pendingErr && pendingErr.code !== 'PGRST116') {
+    console.error('Error al buscar pending_checkouts', pendingId, pendingErr);
+    return new Response('Error al buscar el pedido pendiente', { status: 500 });
+  }
+  if (!pending) {
     console.error('pending_checkouts no encontrado para external_reference', pendingId);
     return new Response('ok', { status: 200 });
   }
