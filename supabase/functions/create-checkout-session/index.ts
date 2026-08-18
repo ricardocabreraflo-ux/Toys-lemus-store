@@ -97,31 +97,49 @@ Deno.serve(async (req) => {
       .single();
     if (pendingErr) throw pendingErr;
 
+    const preferenceBody = {
+      items: mpItems,
+      payer: { email: customer_email },
+      back_urls: {
+        success: `${SITE_URL}/index.html?checkout=success`,
+        failure: `${SITE_URL}/index.html?checkout=cancel`,
+        pending: `${SITE_URL}/index.html?checkout=cancel`,
+      },
+      auto_return: 'approved',
+      notification_url: `${SUPABASE_URL}/functions/v1/mercadopago-webhook`,
+      external_reference: pending.id,
+      payment_methods: {
+        excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }],
+      },
+    };
+
     const mpRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        items: mpItems,
-        payer: { email: customer_email },
-        back_urls: {
-          success: `${SITE_URL}/index.html?checkout=success`,
-          failure: `${SITE_URL}/index.html?checkout=cancel`,
-          pending: `${SITE_URL}/index.html?checkout=cancel`,
-        },
-        auto_return: 'approved',
-        notification_url: `${SUPABASE_URL}/functions/v1/mercadopago-webhook`,
-        external_reference: pending.id,
-        payment_methods: {
-          excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }],
-        },
-      }),
+      body: JSON.stringify(preferenceBody),
     });
     const mpData = await mpRes.json();
     if (!mpRes.ok) {
-      console.error('Mercado Pago preference error', mpData);
+      console.error('Mercado Pago preference error', {
+        request: {
+          url: 'https://api.mercadopago.com/checkout/preferences',
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${MP_ACCESS_TOKEN.slice(0, 10)}...(oculto)`,
+            'Content-Type': 'application/json',
+          },
+          body: preferenceBody,
+        },
+        response: {
+          status: mpRes.status,
+          requestId: mpRes.headers.get('x-request-id'),
+          headers: Object.fromEntries(mpRes.headers.entries()),
+          body: mpData,
+        },
+      });
       return json({ error: 'No se pudo iniciar el pago' }, 500);
     }
 
