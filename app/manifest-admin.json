@@ -4,6 +4,7 @@
   "description": "Panel de administrador de Lemus Store.",
   "start_url": "/admin.html",
   "scope": "/",
+  "id": "/admin.html",
   "display": "standalone",
   "background_color": "#FFFBF2",
   "theme_color": "#FF5A36",

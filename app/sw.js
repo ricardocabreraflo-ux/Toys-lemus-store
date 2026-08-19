@@ -51,16 +51,33 @@ self.addEventListener('fetch', (event) => {
   // offline page. Never cache API/Supabase responses.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => caches.match('/offline.html'))
+      fetch(request).catch(() =>
+        caches.match('/offline.html').then((cached) =>
+          cached || new Response(
+            '<h1>Sin conexión</h1><p>Revisa tu internet e intenta de nuevo.</p>',
+            { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+          )
+        )
+      )
     );
     return;
   }
 
-  // Static shell assets only: cache-first, network as backup.
+  // Static shell assets only: stale-while-revalidate so a future deploy's
+  // new CSS/JS reaches existing visitors on the next load.
   const url = new URL(request.url);
   if (request.method === 'GET' && url.origin === self.location.origin && SHELL_URLS.includes(url.pathname)) {
     event.respondWith(
-      caches.match(request).then((cached) => cached || fetch(request))
+      caches.match(request).then((cached) => {
+        const network = fetch(request).then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(request, copy));
+          }
+          return res;
+        });
+        return cached || network;
+      })
     );
   }
 });

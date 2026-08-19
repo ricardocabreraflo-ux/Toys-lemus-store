@@ -4,6 +4,7 @@
   "description": "Catálogo de juguetes Lemus Store, con inventario en vivo.",
   "start_url": "/index.html",
   "scope": "/",
+  "id": "/index.html",
   "display": "standalone",
   "background_color": "#FFFBF2",
   "theme_color": "#FF5A36",
