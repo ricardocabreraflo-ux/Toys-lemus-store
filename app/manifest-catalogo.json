@@ -1,0 +1,15 @@
+{
+  "name": "Lemus Store",
+  "short_name": "Lemus Store",
+  "description": "Catálogo de juguetes Lemus Store, con inventario en vivo.",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFFBF2",
+  "theme_color": "#FF5A36",
+  "icons": [
+    { "src": "icons/catalogo/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/catalogo/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/catalogo/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
