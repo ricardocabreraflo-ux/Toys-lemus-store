@@ -6,6 +6,9 @@
 <title>Lemus Store — Catálogo</title>
 <meta name="description" content="Catálogo de juguetes Lemus Store, con inventario en vivo.">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="manifest" href="manifest-catalogo.json">
+<meta name="theme-color" content="#FF5A36">
+<link rel="apple-touch-icon" href="icons/catalogo/apple-touch-icon.png">
 </head>
 <body>
 
@@ -104,5 +107,12 @@
 
 <script src="js/vendor/supabase.umd.js"></script>
 <script type="module" src="js/catalog.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+  }
+</script>
 </body>
 </html>
