@@ -6,6 +6,9 @@
 <title>Lemus Store — Panel de administrador</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="manifest" href="manifest-admin.json">
+<meta name="theme-color" content="#FF5A36">
+<link rel="apple-touch-icon" href="icons/admin/apple-touch-icon.png">
 </head>
 <body>
 
@@ -448,5 +451,12 @@
 
 <script src="js/vendor/supabase.umd.js"></script>
 <script type="module" src="js/admin.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+  }
+</script>
 </body>
 </html>
