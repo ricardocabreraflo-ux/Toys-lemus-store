@@ -175,6 +175,9 @@ main { padding: 40px 0 100px; }
 .grid-head[hidden] { display: none; }
 .grid-head h2 { font-size: 1.5rem; }
 .grid-head .count { color: var(--ink-soft); font-size: 0.92rem; }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 28px 0 8px; }
+.pagination[hidden] { display: none; }
+.pagination-label { font-weight: 700; color: var(--ink-soft); font-size: 0.92rem; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px; }
 .card { background: var(--panel); border: 2px solid var(--line); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow); transition: transform 0.16s var(--ease-out), box-shadow 0.16s var(--ease-out), border-color 0.16s var(--ease-out); opacity: 1; transform: translateY(0) scale(1); }
 .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--c, var(--accent)); }

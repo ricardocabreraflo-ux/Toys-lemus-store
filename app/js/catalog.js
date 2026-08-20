@@ -11,6 +11,8 @@ let activeLine = 'all';
 let activeCat = 'all';
 let query = '';
 const cart = {}; // keyed by product id
+let currentPage = 1;
+const PAGE_SIZE = 15;
 
 initThemeToggle();
 
@@ -59,6 +61,7 @@ function buildCatRail() {
 function setLine(id) {
   activeLine = id;
   activeCat = 'all';
+  currentPage = 1;
   buildLineRail();
   buildCatRail();
   render(true);
@@ -66,6 +69,7 @@ function setLine(id) {
 
 function setCat(id) {
   activeCat = id;
+  currentPage = 1;
   buildCatRail();
   render(true);
 }
@@ -111,14 +115,26 @@ function cardHtml(p, pos) {
 function render(animate) {
   const grid = document.getElementById('grid');
   const filtered = PRODUCTS.filter(matches);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageItems = filtered.slice(start, start + PAGE_SIZE);
+
   grid.classList.toggle('animate-in', !!animate);
-  grid.innerHTML = filtered.map((p, pos) => cardHtml(p, pos)).join('');
+  grid.innerHTML = pageItems.map((p, pos) => cardHtml(p, pos)).join('');
   document.getElementById('empty-state').hidden = filtered.length !== 0 || PRODUCTS.length === 0;
   document.getElementById('result-count').textContent = filtered.length + (filtered.length === 1 ? ' producto' : ' productos');
   document.getElementById('section-title').textContent =
     activeCat !== 'all' ? (catById(activeCat)?.name || '') :
     activeLine !== 'all' ? (lineById(activeLine)?.name || '') :
     'Todo el catálogo';
+
+  const pagination = document.getElementById('pagination');
+  pagination.hidden = filtered.length <= PAGE_SIZE;
+  document.getElementById('page-label').textContent = `Página ${currentPage} de ${totalPages}`;
+  document.getElementById('page-prev').disabled = currentPage <= 1;
+  document.getElementById('page-next').disabled = currentPage >= totalPages;
+
   grid.querySelectorAll('.add-btn').forEach(btn => {
     btn.addEventListener('click', () => addToCart(btn.dataset.id));
   });
@@ -284,7 +300,17 @@ document.getElementById('layaway-btn').addEventListener('click', async () => {
   window.location.href = data.url;
 });
 
-document.getElementById('search').addEventListener('input', (e) => { query = e.target.value; render(false); });
+document.getElementById('search').addEventListener('input', (e) => { query = e.target.value; currentPage = 1; render(false); });
+document.getElementById('page-prev').addEventListener('click', () => {
+  currentPage--;
+  render(true);
+  document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+document.getElementById('page-next').addEventListener('click', () => {
+  currentPage++;
+  render(true);
+  document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 
 function buildHeroFloats() {
   const hero = document.querySelector('.hero');
