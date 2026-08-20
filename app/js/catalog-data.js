@@ -49,7 +49,8 @@ export async function loadActivePromotions() {
 export function bestPromotionFor(product, promotions) {
   const matches = promotions.filter(p =>
     (p.scope_type === 'line' && p.product_line_id === product.product_line_id) ||
-    (p.scope_type === 'category' && p.category_id === product.category_id)
+    (p.scope_type === 'category' && p.category_id === product.category_id) ||
+    (p.scope_type === 'product' && p.product_id === product.id)
   );
   if (matches.length === 0) return null;
   return matches.reduce((best, p) => (p.discount_percent > best.discount_percent ? p : best), matches[0]);

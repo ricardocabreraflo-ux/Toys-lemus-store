@@ -148,11 +148,40 @@ function promoBannerText(promo) {
   return `${promo.discount_percent}% de descuento en ${scopeName}`;
 }
 
+// No real product photos exist in this store — reuse the same
+// icon+color system the catalog cards already use (see cardHtml),
+// just larger, so the banner stays visually consistent.
+function productPromoCardHtml(promo) {
+  const product = findProduct(promo.product_id);
+  if (!product) return '';
+  const c = accentFor(product.category_id);
+  const icon = iconKeyFor(product.category_id);
+  const { price } = discountedPrice(product, PROMOTIONS);
+  return `
+    <article class="promo-product-card" style="--c:${c}">
+      <div class="promo-product-art">${iconSvg(icon, 'stroke-width="1.6"')}</div>
+      <div class="promo-product-body">
+        <span class="promo-product-badge">-${promo.discount_percent}%</span>
+        <h3 class="promo-product-name">${product.name}</h3>
+        <div class="promo-product-price">
+          <span class="price">${fmt.format(price)}<sup> MXN</sup></span>
+          <span class="price-was">${fmt.format(product.price)}</span>
+        </div>
+      </div>
+    </article>`;
+}
+
 function renderPromoBanner() {
   const el = document.getElementById('promo-banner');
-  if (PROMOTIONS.length === 0) { el.hidden = true; el.innerHTML = ''; return; }
+  const productPromos = PROMOTIONS.filter(p => p.scope_type === 'product');
+  const textPromos = PROMOTIONS.filter(p => p.scope_type !== 'product');
+  const productCardsHtml = productPromos.map(productPromoCardHtml).filter(Boolean).join('');
+  const textPillsHtml = textPromos.map(promo => `<div class="promo-banner-item">${promoBannerText(promo)}</div>`).join('');
+  if (!productCardsHtml && !textPillsHtml) { el.hidden = true; el.innerHTML = ''; return; }
   el.hidden = false;
-  el.innerHTML = PROMOTIONS.map(promo => `<div class="promo-banner-item">${promoBannerText(promo)}</div>`).join('');
+  el.innerHTML =
+    (productCardsHtml ? `<div class="promo-product-row">${productCardsHtml}</div>` : '') +
+    (textPillsHtml ? `<div class="promo-banner-pills">${textPillsHtml}</div>` : '');
 }
 
 function findProduct(id) { return PRODUCTS.find(p => p.id === id); }
@@ -380,9 +409,12 @@ async function loadAll() {
     LINES = lines.filter(l => l.visible_public !== false);
     const visibleLineIds = new Set(LINES.map(l => l.id));
     CATEGORIES = cats.filter(c => visibleLineIds.has(c.product_line_id));
-    PROMOTIONS = promos.filter(p =>
-      p.scope_type === 'line' ? visibleLineIds.has(p.product_line_id)
-                              : CATEGORIES.some(c => c.id === p.category_id));
+    PROMOTIONS = promos.filter(p => {
+      if (p.scope_type === 'line') return visibleLineIds.has(p.product_line_id);
+      if (p.scope_type === 'category') return CATEGORIES.some(c => c.id === p.category_id);
+      const targetProduct = productsRes.data.find(pr => pr.id === p.product_id);
+      return targetProduct ? visibleLineIds.has(targetProduct.product_line_id) : false;
+    });
     PRODUCTS = productsRes.data.filter(p => visibleLineIds.has(p.product_line_id));
     SITE_SETTINGS = settings;
     buildLineRail();
