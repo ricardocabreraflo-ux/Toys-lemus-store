@@ -45,6 +45,18 @@ export async function loadActivePromotions() {
   return data;
 }
 
+export async function loadUpcomingPromotions() {
+  const nowIso = new Date().toISOString();
+  const { data, error } = await supabase
+    .from('promotions')
+    .select('*')
+    .eq('active', true)
+    .gt('starts_at', nowIso)
+    .order('starts_at', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
 // The best (highest %) active promotion that applies to this product, or null.
 export function bestPromotionFor(product, promotions) {
   const matches = promotions.filter(p =>

@@ -1,5 +1,5 @@
 import { supabase, fmt } from './supabase-client.js';
-import { loadProductLines, loadCategories, loadActivePromotions, loadSiteSettings, discountedPrice, accentFor, iconKeyFor } from './catalog-data.js';
+import { loadProductLines, loadCategories, loadActivePromotions, loadUpcomingPromotions, loadSiteSettings, discountedPrice, accentFor, iconKeyFor } from './catalog-data.js';
 import { iconSvg } from './icons.js';
 import { applyAutoTheme } from './theme.js';
 
@@ -7,6 +7,7 @@ let PRODUCTS = [];
 let LINES = [];
 let CATEGORIES = [];
 let PROMOTIONS = [];
+let UPCOMING_PROMOTIONS = [];
 let SITE_SETTINGS = { show_products_stat: false };
 let activeLine = 'all';
 let activeCat = 'all';
@@ -182,6 +183,27 @@ function renderPromoBanner() {
   el.innerHTML =
     (productCardsHtml ? `<div class="promo-product-row">${productCardsHtml}</div>` : '') +
     (textPillsHtml ? `<div class="promo-banner-pills">${textPillsHtml}</div>` : '');
+}
+
+function upcomingPromoText(promo) {
+  const dateLabel = new Date(promo.starts_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+  if (promo.scope_type === 'product') {
+    const product = findProduct(promo.product_id);
+    if (!product) return '';
+    return `Próximamente: ${promo.discount_percent}% de descuento en ${product.name} a partir del ${dateLabel}`;
+  }
+  const scopeName = promo.scope_type === 'line'
+    ? (lineById(promo.product_line_id)?.name || '')
+    : (catById(promo.category_id)?.name || '');
+  return `Próximamente: ${promo.discount_percent}% de descuento en ${scopeName} a partir del ${dateLabel}`;
+}
+
+function renderUpcomingPromos() {
+  const el = document.getElementById('promo-upcoming');
+  const items = UPCOMING_PROMOTIONS.map(upcomingPromoText).filter(Boolean);
+  if (items.length === 0) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  el.innerHTML = items.map(text => `<div class="promo-upcoming-item">${text}</div>`).join('');
 }
 
 function findProduct(id) { return PRODUCTS.find(p => p.id === id); }
@@ -385,6 +407,13 @@ function initStats() {
   document.getElementById('stat-low').textContent = PRODUCTS.filter(p => p.stock_online <= 1).length;
 }
 
+function isPromoVisible(promo, { visibleLineIds, categories, productsData }) {
+  if (promo.scope_type === 'line') return visibleLineIds.has(promo.product_line_id);
+  if (promo.scope_type === 'category') return categories.some(c => c.id === promo.category_id);
+  const targetProduct = productsData.find(pr => pr.id === promo.product_id);
+  return targetProduct ? visibleLineIds.has(targetProduct.product_line_id) : false;
+}
+
 async function loadAll() {
   try {
     // Isolated from the critical Promise.all below on purpose: a failure
@@ -396,10 +425,11 @@ async function loadAll() {
     } catch (err) {
       console.error('No se pudo cargar site_settings, usando valores por defecto', err);
     }
-    const [lines, cats, promos, productsRes] = await Promise.all([
+    const [lines, cats, promos, upcoming, productsRes] = await Promise.all([
       loadProductLines(),
       loadCategories(),
       loadActivePromotions(),
+      loadUpcomingPromotions(),
       supabase.from('products_view').select('*').eq('published_online', true).order('name'),
     ]);
     if (productsRes.error) throw productsRes.error;
@@ -409,12 +439,8 @@ async function loadAll() {
     LINES = lines.filter(l => l.visible_public !== false);
     const visibleLineIds = new Set(LINES.map(l => l.id));
     CATEGORIES = cats.filter(c => visibleLineIds.has(c.product_line_id));
-    PROMOTIONS = promos.filter(p => {
-      if (p.scope_type === 'line') return visibleLineIds.has(p.product_line_id);
-      if (p.scope_type === 'category') return CATEGORIES.some(c => c.id === p.category_id);
-      const targetProduct = productsRes.data.find(pr => pr.id === p.product_id);
-      return targetProduct ? visibleLineIds.has(targetProduct.product_line_id) : false;
-    });
+    PROMOTIONS = promos.filter(p => isPromoVisible(p, { visibleLineIds, categories: CATEGORIES, productsData: productsRes.data }));
+    UPCOMING_PROMOTIONS = upcoming.filter(p => isPromoVisible(p, { visibleLineIds, categories: CATEGORIES, productsData: productsRes.data }));
     PRODUCTS = productsRes.data.filter(p => visibleLineIds.has(p.product_line_id));
     SITE_SETTINGS = settings;
     buildLineRail();
@@ -422,6 +448,7 @@ async function loadAll() {
     initStats();
     render(true);
     renderPromoBanner();
+    renderUpcomingPromos();
   } catch (err) {
     showToast('No se pudo cargar el catálogo');
     console.error(err);
