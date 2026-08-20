@@ -51,10 +51,11 @@ Deno.serve(async (req) => {
       .or(`ends_at.is.null,ends_at.gte.${nowIso}`);
     if (promoErr) throw promoErr;
 
-    function discountedPrice(p: { price: number; product_line_id: string | null; category_id: string | null }) {
-      const matches = (promotions ?? []).filter((promo: { scope_type: string; product_line_id: string | null; category_id: string | null; discount_percent: number }) =>
+    function discountedPrice(p: { id: string; price: number; product_line_id: string | null; category_id: string | null }) {
+      const matches = (promotions ?? []).filter((promo: { scope_type: string; product_line_id: string | null; category_id: string | null; product_id: string | null; discount_percent: number }) =>
         (promo.scope_type === 'line' && promo.product_line_id === p.product_line_id) ||
-        (promo.scope_type === 'category' && promo.category_id === p.category_id)
+        (promo.scope_type === 'category' && promo.category_id === p.category_id) ||
+        (promo.scope_type === 'product' && promo.product_id === p.id)
       );
       if (matches.length === 0) return p.price;
       const best = matches.reduce((a, b) => (b.discount_percent > a.discount_percent ? b : a), matches[0]);
