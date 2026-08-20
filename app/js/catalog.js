@@ -117,7 +117,7 @@ function render(animate) {
   const grid = document.getElementById('grid');
   const filtered = PRODUCTS.filter(matches);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  if (currentPage > totalPages) currentPage = totalPages;
+  currentPage = Math.min(Math.max(1, currentPage), totalPages);
   const start = (currentPage - 1) * PAGE_SIZE;
   const pageItems = filtered.slice(start, start + PAGE_SIZE);
 
@@ -380,7 +380,9 @@ async function loadAll() {
     LINES = lines.filter(l => l.visible_public !== false);
     const visibleLineIds = new Set(LINES.map(l => l.id));
     CATEGORIES = cats.filter(c => visibleLineIds.has(c.product_line_id));
-    PROMOTIONS = promos;
+    PROMOTIONS = promos.filter(p =>
+      p.scope_type === 'line' ? visibleLineIds.has(p.product_line_id)
+                              : CATEGORIES.some(c => c.id === p.category_id));
     PRODUCTS = productsRes.data.filter(p => visibleLineIds.has(p.product_line_id));
     SITE_SETTINGS = settings;
     buildLineRail();
@@ -401,6 +403,7 @@ function subscribeRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, () => loadAll())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => loadAll())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'product_lines' }, () => loadAll())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, () => loadAll())
     .subscribe();
 }
 

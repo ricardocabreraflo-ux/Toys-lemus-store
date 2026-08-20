@@ -1,5 +1,5 @@
 import { supabase, fmt } from './supabase-client.js';
-import { loadProductLines, loadCategories } from './catalog-data.js';
+import { loadProductLines, loadCategories, loadSiteSettings } from './catalog-data.js';
 import { initThemeToggle } from './theme.js';
 
 let LINES = [];
@@ -967,12 +967,6 @@ function renderTaxonomy() {
 
 // ---------- Settings tab ----------
 
-async function loadSiteSettings() {
-  const { data, error } = await supabase.from('site_settings').select('*').single();
-  if (error) throw error;
-  return data;
-}
-
 function renderSettings() {
   document.getElementById('settings-lines-tbody').innerHTML = LINES.map(l => `
     <tr data-id="${l.id}">
@@ -1152,10 +1146,14 @@ async function reloadProducts() {
 
 async function loadEverything() {
   try {
-    const [lines, cats, settings] = await Promise.all([loadProductLines(), loadCategories(), loadSiteSettings()]);
+    const [lines, cats] = await Promise.all([loadProductLines(), loadCategories()]);
     LINES = lines;
     CATEGORIES = cats;
-    SITE_SETTINGS = settings;
+    try {
+      SITE_SETTINGS = await loadSiteSettings();
+    } catch (err) {
+      console.error('No se pudo cargar site_settings, usando valores por defecto', err);
+    }
     await reloadProducts();
     const { data: promos, error: promoErr } = await supabase.from('promotions').select('*').order('created_at', { ascending: false });
     if (promoErr) throw promoErr;

@@ -102,6 +102,7 @@ button { font-family: inherit; }
 }
 
 .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+#catalogo { scroll-margin-top: 80px; }
 
 /* ---------- Header ---------- */
 header.site { position: sticky; top: 0; z-index: 40; background: var(--bg); border-bottom: 3px solid var(--ink); box-shadow: var(--shadow); }

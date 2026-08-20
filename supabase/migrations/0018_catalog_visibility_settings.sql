@@ -32,4 +32,19 @@ drop policy if exists "admin write" on public.site_settings;
 create policy "admin write" on public.site_settings for all
   to authenticated using (public.is_admin()) with check (public.is_admin());
 
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'site_settings'
+  ) then
+    alter publication supabase_realtime add table public.site_settings;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'product_lines'
+  ) then
+    alter publication supabase_realtime add table public.product_lines;
+  end if;
+end;
+$$;
+
 notify pgrst, 'reload schema';
