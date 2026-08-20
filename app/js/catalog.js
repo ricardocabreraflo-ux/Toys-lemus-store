@@ -1,7 +1,7 @@
 import { supabase, fmt } from './supabase-client.js';
 import { loadProductLines, loadCategories, loadActivePromotions, loadSiteSettings, discountedPrice, accentFor, iconKeyFor } from './catalog-data.js';
 import { iconSvg } from './icons.js';
-import { initThemeToggle } from './theme.js';
+import { applyAutoTheme } from './theme.js';
 
 let PRODUCTS = [];
 let LINES = [];
@@ -15,7 +15,7 @@ const cart = {}; // keyed by product id
 let currentPage = 1;
 const PAGE_SIZE = 15;
 
-initThemeToggle();
+applyAutoTheme();
 
 const lineById = (id) => LINES.find(l => l.id === id);
 const catById = (id) => CATEGORIES.find(c => c.id === id);

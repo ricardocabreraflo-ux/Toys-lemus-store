@@ -11,6 +11,21 @@ function paintIcon() {
     : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
 }
 
+// Only used by the public catalog (index.html) — Admin keeps its manual
+// toggle untouched. Sets the theme straight from the clock, without
+// touching localStorage: the two pages share an origin (and so share
+// localStorage), and this must never leak into or fight with Admin's own
+// manual preference stored under the same 'lemus-theme' key.
+export function applyAutoTheme() {
+  const hour = Number(new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Mexico_City',
+    hour: 'numeric',
+    hour12: false,
+  }).format(new Date()));
+  const isDay = hour >= 7 && hour < 19;
+  root.setAttribute('data-theme', isDay ? 'light' : 'dark');
+}
+
 export function applyTheme(t) {
   if (t) { root.setAttribute('data-theme', t); localStorage.setItem('lemus-theme', t); }
   paintIcon();
