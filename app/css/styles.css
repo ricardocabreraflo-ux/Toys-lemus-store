@@ -298,6 +298,12 @@ select.cell-input { appearance: none; cursor: pointer; }
 .add-form .field { grid-column: span 1; }
 .add-form .submit-cell { display: flex; align-items: flex-end; }
 
+.autocomplete-wrap { position: relative; margin-top: 6px; }
+.autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; z-index: 20; background: var(--panel); border: 2px solid var(--line); border-radius: 10px; margin-top: 4px; max-height: 220px; overflow-y: auto; box-shadow: var(--shadow); }
+.autocomplete-list[hidden] { display: none; }
+.autocomplete-item { display: block; width: 100%; text-align: left; padding: 8px 12px; border: none; background: transparent; color: var(--ink); font: inherit; cursor: pointer; }
+.autocomplete-item:hover, .autocomplete-item:focus-visible { background: var(--bg-alt); outline: none; }
+
 @media (max-width: 640px) {
   .hero { padding: 44px 20px 40px; }
   .searchbox { max-width: none; }

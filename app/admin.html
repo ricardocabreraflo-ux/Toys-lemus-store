@@ -335,11 +335,16 @@
         <select class="cell-input" id="promo-scope-type">
           <option value="line">Una línea completa</option>
           <option value="category">Una categoría</option>
+          <option value="product">Un producto específico</option>
         </select>
       </div>
-      <div class="field">
+      <div class="field" id="promo-target-field">
         <label for="promo-scope-target">¿Cuál?</label>
         <select class="cell-input" id="promo-scope-target" required></select>
+        <div class="autocomplete-wrap" id="promo-product-wrap" hidden>
+          <input class="cell-input" id="promo-product-search" type="text" autocomplete="off" placeholder="Escribe el nombre del producto…">
+          <div class="autocomplete-list" id="promo-product-suggestions" hidden></div>
+        </div>
       </div>
       <div class="field">
         <label for="promo-discount">Descuento %</label>

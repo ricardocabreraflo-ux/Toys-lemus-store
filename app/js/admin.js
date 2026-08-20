@@ -795,9 +795,43 @@ function renderTransfers() {
 
 // ---------- Promotions tab ----------
 
+let selectedPromoProductId = null;
+
+function renderPromoProductSuggestions(query) {
+  const list = document.getElementById('promo-product-suggestions');
+  const q = query.trim().toLowerCase();
+  if (!q) { list.hidden = true; list.innerHTML = ''; return; }
+  const matches = PRODUCTS.filter(p => p.name.toLowerCase().includes(q)).slice(0, 8);
+  if (matches.length === 0) { list.hidden = true; list.innerHTML = ''; return; }
+  list.innerHTML = matches.map(p =>
+    `<button type="button" class="autocomplete-item" data-id="${p.id}">${escapeHtml(p.name)}</button>`
+  ).join('');
+  list.hidden = false;
+}
+
 function refreshPromoScopeTarget() {
   const typeSel = document.getElementById('promo-scope-type');
   const targetSel = document.getElementById('promo-scope-target');
+  const productWrap = document.getElementById('promo-product-wrap');
+  if (typeSel.value === 'product') {
+    targetSel.hidden = true;
+    targetSel.required = false;
+    // refreshPromoScopeTarget() is also called after unrelated
+    // line/category realtime updates (see refreshAllLineDependentUI),
+    // not just on an actual "Aplica a" change — only reset the search
+    // when actually switching into product mode, so one of those
+    // unrelated calls can't wipe an in-progress product search.
+    if (productWrap.hidden) {
+      productWrap.hidden = false;
+      selectedPromoProductId = null;
+      document.getElementById('promo-product-search').value = '';
+      document.getElementById('promo-product-suggestions').hidden = true;
+    }
+    return;
+  }
+  targetSel.hidden = false;
+  targetSel.required = true;
+  productWrap.hidden = true;
   if (typeSel.value === 'line') {
     optionsForLines(targetSel);
   } else {
@@ -806,23 +840,51 @@ function refreshPromoScopeTarget() {
     ).join('');
   }
 }
+
+document.getElementById('promo-product-search').addEventListener('input', (e) => {
+  selectedPromoProductId = null;
+  renderPromoProductSuggestions(e.target.value);
+});
+
+document.getElementById('promo-product-suggestions').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-id]');
+  if (!btn) return;
+  const product = PRODUCTS.find(p => p.id === btn.dataset.id);
+  if (!product) return;
+  selectedPromoProductId = product.id;
+  document.getElementById('promo-product-search').value = product.name;
+  document.getElementById('promo-product-suggestions').hidden = true;
+  const nameField = document.getElementById('promo-name');
+  if (!nameField.value.trim()) nameField.value = product.name;
+});
+
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('promo-product-wrap');
+  if (!wrap.hidden && !wrap.contains(e.target)) {
+    document.getElementById('promo-product-suggestions').hidden = true;
+  }
+});
 document.getElementById('promo-scope-type').addEventListener('change', refreshPromoScopeTarget);
 
 document.getElementById('promo-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = document.getElementById('promo-name').value.trim();
   const scope_type = document.getElementById('promo-scope-type').value;
-  const target = document.getElementById('promo-scope-target').value;
+  const target = scope_type === 'product' ? selectedPromoProductId : document.getElementById('promo-scope-target').value;
   const discount_percent = Math.min(100, Math.max(1, Number(document.getElementById('promo-discount').value) || 0));
   const startsRaw = document.getElementById('promo-starts').value;
   const endsRaw = document.getElementById('promo-ends').value;
-  if (!name || !target) return;
+  if (!name || !target) {
+    if (scope_type === 'product' && !target) showToast('Elige un producto de la lista', true);
+    return;
+  }
 
   const payload = {
     name,
     scope_type,
     product_line_id: scope_type === 'line' ? target : null,
     category_id: scope_type === 'category' ? target : null,
+    product_id: scope_type === 'product' ? target : null,
     discount_percent,
     starts_at: startsRaw ? new Date(startsRaw + 'T00:00:00').toISOString() : null,
     ends_at: endsRaw ? new Date(endsRaw + 'T23:59:59').toISOString() : null,
@@ -834,11 +896,17 @@ document.getElementById('promo-form').addEventListener('submit', async (e) => {
   renderPromotions();
   showToast(`Promoción "${name}" creada`);
   e.target.reset();
+  selectedPromoProductId = null;
+  document.getElementById('promo-product-suggestions').hidden = true;
   refreshPromoScopeTarget();
 });
 
 function promoScopeLabel(p) {
   if (p.scope_type === 'line') return (lineById(p.product_line_id)?.name || '—') + ' (línea completa)';
+  if (p.scope_type === 'product') {
+    const prod = PRODUCTS.find(pr => pr.id === p.product_id);
+    return prod ? `${prod.name} (producto)` : '—';
+  }
   const c = catById(p.category_id);
   return c ? `${lineById(c.product_line_id)?.name || ''} — ${c.name}` : '—';
 }
