@@ -27,6 +27,12 @@ export async function loadCategories() {
   return data;
 }
 
+export async function loadSiteSettings() {
+  const { data, error } = await supabase.from('site_settings').select('*').single();
+  if (error) throw error;
+  return data;
+}
+
 export async function loadActivePromotions() {
   const nowIso = new Date().toISOString();
   const { data, error } = await supabase

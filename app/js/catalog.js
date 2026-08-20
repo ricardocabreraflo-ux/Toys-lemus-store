@@ -1,5 +1,5 @@
 import { supabase, fmt } from './supabase-client.js';
-import { loadProductLines, loadCategories, loadActivePromotions, discountedPrice, accentFor, iconKeyFor } from './catalog-data.js';
+import { loadProductLines, loadCategories, loadActivePromotions, loadSiteSettings, discountedPrice, accentFor, iconKeyFor } from './catalog-data.js';
 import { iconSvg } from './icons.js';
 import { initThemeToggle } from './theme.js';
 
@@ -7,6 +7,7 @@ let PRODUCTS = [];
 let LINES = [];
 let CATEGORIES = [];
 let PROMOTIONS = [];
+let SITE_SETTINGS = { show_products_stat: false };
 let activeLine = 'all';
 let activeCat = 'all';
 let query = '';
@@ -349,6 +350,7 @@ function buildHeroFloats() {
 }
 
 function initStats() {
+  document.getElementById('stat-products-wrap').hidden = !SITE_SETTINGS.show_products_stat;
   document.getElementById('stat-products').textContent = PRODUCTS.length;
   document.getElementById('stat-cats').textContent = LINES.length;
   document.getElementById('stat-low').textContent = PRODUCTS.filter(p => p.stock_online <= 1).length;
@@ -356,6 +358,15 @@ function initStats() {
 
 async function loadAll() {
   try {
+    // Isolated from the critical Promise.all below on purpose: a failure
+    // here shouldn't take down the whole catalog, it should just leave the
+    // stat hidden (the default Ricardo wants anyway).
+    let settings = SITE_SETTINGS;
+    try {
+      settings = await loadSiteSettings();
+    } catch (err) {
+      console.error('No se pudo cargar site_settings, usando valores por defecto', err);
+    }
     const [lines, cats, promos, productsRes] = await Promise.all([
       loadProductLines(),
       loadCategories(),
@@ -371,6 +382,7 @@ async function loadAll() {
     CATEGORIES = cats.filter(c => visibleLineIds.has(c.product_line_id));
     PROMOTIONS = promos;
     PRODUCTS = productsRes.data.filter(p => visibleLineIds.has(p.product_line_id));
+    SITE_SETTINGS = settings;
     buildLineRail();
     buildCatRail();
     initStats();
