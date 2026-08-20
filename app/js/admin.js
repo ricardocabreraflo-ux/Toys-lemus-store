@@ -12,6 +12,7 @@ let lineFilter = 'all';
 let catFilter = 'all';
 let publishedOnly = false;
 let CURRENT_ROLE = null; // 'admin' | 'vendedor'
+let SITE_SETTINGS = { show_products_stat: false };
 
 initThemeToggle();
 
@@ -964,6 +965,39 @@ function renderTaxonomy() {
   });
 }
 
+// ---------- Settings tab ----------
+
+async function loadSiteSettings() {
+  const { data, error } = await supabase.from('site_settings').select('*').single();
+  if (error) throw error;
+  return data;
+}
+
+function renderSettings() {
+  document.getElementById('settings-lines-tbody').innerHTML = LINES.map(l => `
+    <tr data-id="${l.id}">
+      <td>${escapeHtml(l.name)}</td>
+      <td><input type="checkbox" data-role="line-visible" ${l.visible_public ? 'checked' : ''}></td>
+    </tr>`).join('');
+  document.getElementById('settings-lines-tbody').querySelectorAll('[data-role="line-visible"]').forEach(cb => {
+    cb.addEventListener('change', async () => {
+      const id = cb.closest('tr').dataset.id;
+      const { error } = await supabase.from('product_lines').update({ visible_public: cb.checked }).eq('id', id);
+      if (error) { showToast('No se pudo actualizar', true); cb.checked = !cb.checked; return; }
+      const line = lineById(id);
+      if (line) line.visible_public = cb.checked;
+    });
+  });
+
+  const statCb = document.getElementById('setting-show-stat');
+  statCb.checked = SITE_SETTINGS.show_products_stat;
+  statCb.onchange = async () => {
+    const { error } = await supabase.from('site_settings').update({ show_products_stat: statCb.checked }).eq('id', true);
+    if (error) { showToast('No se pudo actualizar', true); statCb.checked = !statCb.checked; return; }
+    SITE_SETTINGS.show_products_stat = statCb.checked;
+  };
+}
+
 function refreshAllLineDependentUI() {
   optionsForLines(document.getElementById('new-line'));
   optionsForCategories(document.getElementById('new-category'), document.getElementById('new-line').value);
@@ -1118,9 +1152,10 @@ async function reloadProducts() {
 
 async function loadEverything() {
   try {
-    const [lines, cats] = await Promise.all([loadProductLines(), loadCategories()]);
+    const [lines, cats, settings] = await Promise.all([loadProductLines(), loadCategories(), loadSiteSettings()]);
     LINES = lines;
     CATEGORIES = cats;
+    SITE_SETTINGS = settings;
     await reloadProducts();
     const { data: promos, error: promoErr } = await supabase.from('promotions').select('*').order('created_at', { ascending: false });
     if (promoErr) throw promoErr;
@@ -1143,6 +1178,7 @@ async function loadEverything() {
     renderTransfers();
     renderPromotions();
     renderTaxonomy();
+    renderSettings();
     renderReports();
     await renderSalesReport();
     renderUsers();
@@ -1169,6 +1205,7 @@ function subscribeRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'product_lines' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, scheduleReload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_transfers' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'layaways' }, scheduleReload)

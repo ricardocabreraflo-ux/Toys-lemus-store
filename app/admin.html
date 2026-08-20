@@ -80,6 +80,7 @@
     <button class="tab-btn" data-tab="taxonomy" type="button" aria-selected="false" data-role-admin>Líneas y categorías</button>
     <button class="tab-btn" data-tab="reports" type="button" aria-selected="false" data-role-admin>Reportes</button>
     <button class="tab-btn" data-tab="users" type="button" aria-selected="false" data-role-admin>Usuarios</button>
+    <button class="tab-btn" data-tab="settings" type="button" aria-selected="false" data-role-admin>Ajustes</button>
   </div>
 
   <!-- ---------- Inventario ---------- -->
@@ -442,6 +443,29 @@
       <table class="admin-table">
         <thead><tr><th>Correo</th><th>Invitado</th></tr></thead>
         <tbody id="users-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- Ajustes ---------- -->
+  <section class="tab-panel" id="tab-settings" hidden>
+    <div class="grid-head"><h2>Visibilidad de líneas</h2></div>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Línea</th><th>Visible al público</th></tr></thead>
+        <tbody id="settings-lines-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="grid-head"><h2>Página principal</h2></div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <tbody>
+          <tr>
+            <td>Mostrar contador de "Productos activos"</td>
+            <td><input type="checkbox" id="setting-show-stat"></td>
+          </tr>
+        </tbody>
       </table>
     </div>
   </section>
