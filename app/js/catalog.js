@@ -140,6 +140,20 @@ function render(animate) {
   });
 }
 
+function promoBannerText(promo) {
+  const scopeName = promo.scope_type === 'line'
+    ? (lineById(promo.product_line_id)?.name || '')
+    : (catById(promo.category_id)?.name || '');
+  return `${promo.discount_percent}% de descuento en ${scopeName}`;
+}
+
+function renderPromoBanner() {
+  const el = document.getElementById('promo-banner');
+  if (PROMOTIONS.length === 0) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  el.innerHTML = PROMOTIONS.map(promo => `<div class="promo-banner-item">${promoBannerText(promo)}</div>`).join('');
+}
+
 function findProduct(id) { return PRODUCTS.find(p => p.id === id); }
 
 function addToCart(id) {
@@ -361,6 +375,7 @@ async function loadAll() {
     buildCatRail();
     initStats();
     render(true);
+    renderPromoBanner();
   } catch (err) {
     showToast('No se pudo cargar el catálogo');
     console.error(err);
