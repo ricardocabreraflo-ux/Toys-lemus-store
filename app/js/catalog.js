@@ -156,12 +156,12 @@ function productPromoCardHtml(promo) {
   if (!product) return '';
   const c = accentFor(product.category_id);
   const icon = iconKeyFor(product.category_id);
-  const { price } = discountedPrice(product, PROMOTIONS);
+  const { price, promo: bestPromo } = discountedPrice(product, PROMOTIONS);
   return `
     <article class="promo-product-card" style="--c:${c}">
       <div class="promo-product-art">${iconSvg(icon, 'stroke-width="1.6"')}</div>
       <div class="promo-product-body">
-        <span class="promo-product-badge">-${promo.discount_percent}%</span>
+        <span class="promo-product-badge">-${bestPromo.discount_percent}%</span>
         <h3 class="promo-product-name">${product.name}</h3>
         <div class="promo-product-price">
           <span class="price">${fmt.format(price)}<sup> MXN</sup></span>
