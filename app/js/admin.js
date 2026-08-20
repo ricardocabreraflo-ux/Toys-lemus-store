@@ -824,7 +824,7 @@ document.getElementById('promo-form').addEventListener('submit', async (e) => {
     product_line_id: scope_type === 'line' ? target : null,
     category_id: scope_type === 'category' ? target : null,
     discount_percent,
-    starts_at: startsRaw ? new Date(startsRaw).toISOString() : null,
+    starts_at: startsRaw ? new Date(startsRaw + 'T00:00:00').toISOString() : null,
     ends_at: endsRaw ? new Date(endsRaw + 'T23:59:59').toISOString() : null,
     active: true,
   };
