@@ -323,10 +323,14 @@ async function loadAll() {
       supabase.from('products_view').select('*').eq('published_online', true).order('name'),
     ]);
     if (productsRes.error) throw productsRes.error;
-    LINES = lines;
-    CATEGORIES = cats;
+    // A missing/undefined visible_public (e.g. a stale client before the
+    // migration lands) fails OPEN — better to show an extra line than to
+    // make the whole catalog vanish.
+    LINES = lines.filter(l => l.visible_public !== false);
+    const visibleLineIds = new Set(LINES.map(l => l.id));
+    CATEGORIES = cats.filter(c => visibleLineIds.has(c.product_line_id));
     PROMOTIONS = promos;
-    PRODUCTS = productsRes.data;
+    PRODUCTS = productsRes.data.filter(p => visibleLineIds.has(p.product_line_id));
     buildLineRail();
     buildCatRail();
     initStats();
