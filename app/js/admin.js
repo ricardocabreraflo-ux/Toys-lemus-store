@@ -17,6 +17,7 @@ let CURRENT_ROLE = null; // 'admin' | 'vendedor'
 let SITE_SETTINGS = { show_products_stat: false };
 let SECURITY_SETTINGS = { delete_pin: '0000' };
 let RECENT_PHYSICAL_SALES = [];
+let VENDEDOR_PERMISSIONS = { can_cancel_layaways: false };
 
 initThemeToggle();
 
@@ -59,6 +60,12 @@ function escapeHtml(s) {
 
 async function loadSecuritySettings() {
   const { data, error } = await supabase.from('security_settings').select('*').single();
+  if (error) throw error;
+  return data;
+}
+
+async function loadVendedorPermissions() {
+  const { data, error } = await supabase.from('vendedor_permissions').select('*').single();
   if (error) throw error;
   return data;
 }
@@ -759,7 +766,7 @@ function renderLayaways() {
         <td>
           <button class="btn btn-primary btn-sm" type="button" data-role="abono">Abonar</button>
           <button class="btn btn-sm" type="button" data-role="extend">Extender</button>
-          <button class="btn btn-danger btn-sm" type="button" data-role="cancel">Cancelar</button>
+          ${(CURRENT_ROLE === 'admin' || VENDEDOR_PERMISSIONS.can_cancel_layaways) ? `<button class="btn btn-danger btn-sm" type="button" data-role="cancel">Cancelar</button>` : ''}
         </td>
       </tr>`;
     }).join('');
@@ -1425,13 +1432,23 @@ function renderUsers() {
   const tbody = document.getElementById('users-tbody');
   if (VENDEDORES.length === 0) {
     tbody.innerHTML = `<tr><td colspan="2" style="color:var(--ink-soft);">Sin vendedores todavía.</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = VENDEDORES.map(v => `
+  } else {
+    tbody.innerHTML = VENDEDORES.map(v => `
     <tr>
       <td>${escapeHtml(v.email)}</td>
       <td>${new Date(v.created_at).toLocaleDateString('es-MX')}</td>
     </tr>`).join('');
+  }
+
+  const cancelCb = document.getElementById('permission-cancel-layaways');
+  cancelCb.checked = VENDEDOR_PERMISSIONS.can_cancel_layaways;
+  cancelCb.onchange = async () => {
+    const { error } = await supabase.from('vendedor_permissions').update({ can_cancel_layaways: cancelCb.checked }).eq('id', true);
+    if (error) { showToast('No se pudo actualizar', true); cancelCb.checked = !cancelCb.checked; return; }
+    VENDEDOR_PERMISSIONS.can_cancel_layaways = cancelCb.checked;
+    showToast('Permiso actualizado');
+    renderLayaways();
+  };
 }
 
 document.getElementById('invite-form').addEventListener('submit', async (e) => {
@@ -1489,6 +1506,11 @@ async function loadEverything() {
       SECURITY_SETTINGS = await loadSecuritySettings();
     } catch (err) {
       console.error('No se pudo cargar security_settings, usando el PIN por defecto', err);
+    }
+    try {
+      VENDEDOR_PERMISSIONS = await loadVendedorPermissions();
+    } catch (err) {
+      console.error('No se pudo cargar vendedor_permissions, vendedor sin permisos extra por defecto', err);
     }
     await reloadProducts();
     const { data: promos, error: promoErr } = await supabase.from('promotions').select('*').order('created_at', { ascending: false });
@@ -1550,6 +1572,7 @@ function subscribeRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'layaway_payments' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fixed_expenses' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'security_settings' }, scheduleReload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'vendedor_permissions' }, scheduleReload)
     .subscribe();
 }
 
