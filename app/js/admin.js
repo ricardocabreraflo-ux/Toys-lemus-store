@@ -7,6 +7,8 @@ let CATEGORIES = [];
 let PRODUCTS = [];
 let PROMOTIONS = [];
 let TRANSFERS = [];
+let FIXED_EXPENSES = [];
+let CURRENT_MONTH_MARGIN = 0;
 let query = '';
 let lineFilter = 'all';
 let catFilter = 'all';
@@ -901,6 +903,20 @@ document.getElementById('promo-form').addEventListener('submit', async (e) => {
   refreshPromoScopeTarget();
 });
 
+document.getElementById('expense-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('expense-name').value.trim();
+  const monthly_amount = Math.max(0, Number(document.getElementById('expense-amount').value) || 0);
+  if (!name) return;
+
+  const { data, error } = await supabase.from('fixed_expenses').insert({ name, monthly_amount, active: true }).select().single();
+  if (error) { showToast('No se pudo agregar el gasto', true); console.error(error); return; }
+  FIXED_EXPENSES.push(data);
+  renderFinance();
+  showToast(`Gasto "${name}" agregado`);
+  e.target.reset();
+});
+
 function promoScopeLabel(p) {
   if (p.scope_type === 'line') return (lineById(p.product_line_id)?.name || '—') + ' (línea completa)';
   if (p.scope_type === 'product') {
@@ -1143,6 +1159,134 @@ async function renderSalesReport() {
     </tr>`).join('') || `<tr><td colspan="6" style="color:var(--ink-soft);">Sin ventas todavía.</td></tr>`;
 }
 
+// ---------- Finanzas tab ----------
+
+async function computeCurrentMonthMargin() {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const { data: sales, error: salesErr } = await supabase
+    .from('sales')
+    .select('id, total, status')
+    .in('status', ['completada', 'entregado'])
+    .gte('created_at', startOfMonth);
+  if (salesErr) { console.error(salesErr); return 0; }
+  if (sales.length === 0) return 0;
+
+  const saleIds = sales.map(s => s.id);
+  const { data: items, error: itemsErr } = await supabase
+    .from('sale_items_view')
+    .select('sale_id, quantity, unit_cost_price')
+    .in('sale_id', saleIds);
+  if (itemsErr) { console.error(itemsErr); return 0; }
+
+  const totalRevenue = sales.reduce((s, x) => s + Number(x.total), 0);
+  const totalCost = items.reduce((s, i) => s + (Number(i.unit_cost_price) || 0) * i.quantity, 0);
+  return totalRevenue - totalCost;
+}
+
+async function loadFinance() {
+  if (CURRENT_ROLE !== 'admin') return;
+  const { data, error } = await supabase.from('fixed_expenses').select('*').order('created_at', { ascending: true });
+  if (error) { console.error(error); return; }
+  FIXED_EXPENSES = data;
+  CURRENT_MONTH_MARGIN = await computeCurrentMonthMargin();
+}
+
+function renderFinance() {
+  if (CURRENT_ROLE !== 'admin') return;
+  renderExpensesTable();
+  renderBreakEvenSummary();
+}
+
+function renderExpensesTable() {
+  const tbody = document.getElementById('finance-expenses-tbody');
+  tbody.innerHTML = FIXED_EXPENSES.map(exp => `
+    <tr data-id="${exp.id}">
+      <td><input class="cell-input" data-field="name" value="${escapeHtml(exp.name)}"></td>
+      <td><input class="cell-input" data-field="monthly_amount" type="number" min="0" step="0.01" value="${exp.monthly_amount}"></td>
+      <td><input type="checkbox" data-role="expense-active" ${exp.active ? 'checked' : ''}></td>
+      <td>
+        <button class="icon-mini danger" data-role="expense-delete" type="button" aria-label="Eliminar ${escapeHtml(exp.name)}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+        </button>
+      </td>
+    </tr>`).join('') || `<tr><td colspan="4" style="color:var(--ink-soft);">Sin gastos fijos todavía.</td></tr>`;
+
+  tbody.querySelectorAll('[data-field]').forEach(input => {
+    input.addEventListener('change', async () => {
+      const row = input.closest('tr');
+      const id = row.dataset.id;
+      const field = input.dataset.field;
+      let value = input.value;
+      if (field === 'monthly_amount') value = Math.max(0, Number(value) || 0);
+      else value = value.trim();
+      const { error } = await supabase.from('fixed_expenses').update({ [field]: value }).eq('id', id);
+      if (error) { showToast('No se pudo guardar el cambio', true); return; }
+      const local = FIXED_EXPENSES.find(e => e.id === id);
+      if (local) local[field] = value;
+      renderFinance();
+    });
+  });
+
+  tbody.querySelectorAll('[data-role="expense-active"]').forEach(cb => {
+    cb.addEventListener('change', async () => {
+      const id = cb.closest('tr').dataset.id;
+      const { error } = await supabase.from('fixed_expenses').update({ active: cb.checked }).eq('id', id);
+      if (error) { showToast('No se pudo actualizar', true); cb.checked = !cb.checked; return; }
+      const local = FIXED_EXPENSES.find(e => e.id === id);
+      if (local) local.active = cb.checked;
+      renderFinance();
+    });
+  });
+
+  tbody.querySelectorAll('[data-role="expense-delete"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('tr').dataset.id;
+      const expense = FIXED_EXPENSES.find(e => e.id === id);
+      if (!expense || !confirm(`¿Eliminar el gasto "${expense.name}"?`)) return;
+      const { error } = await supabase.from('fixed_expenses').delete().eq('id', id);
+      if (error) { showToast('No se pudo eliminar', true); return; }
+      FIXED_EXPENSES = FIXED_EXPENSES.filter(e => e.id !== id);
+      renderFinance();
+    });
+  });
+}
+
+function renderBreakEvenSummary() {
+  const activeExpenses = FIXED_EXPENSES.filter(e => e.active);
+  const summaryEl = document.getElementById('finance-summary');
+  const noExpensesMsg = document.getElementById('finance-no-expenses-msg');
+
+  if (activeExpenses.length === 0) {
+    summaryEl.hidden = true;
+    noExpensesMsg.hidden = false;
+    return;
+  }
+  summaryEl.hidden = false;
+  noExpensesMsg.hidden = true;
+
+  const expensesTotal = activeExpenses.reduce((s, e) => s + Number(e.monthly_amount), 0);
+  document.getElementById('finance-margin').textContent = fmt.format(CURRENT_MONTH_MARGIN);
+  document.getElementById('finance-expenses-total').textContent = fmt.format(expensesTotal);
+
+  const resultTile = document.getElementById('finance-result-tile');
+  const resultEl = document.getElementById('finance-result');
+  const resultLabel = document.getElementById('finance-result-label');
+  const delta = CURRENT_MONTH_MARGIN - expensesTotal;
+
+  if (delta >= 0) {
+    resultTile.classList.remove('warn');
+    resultTile.classList.add('ok');
+    resultLabel.textContent = 'Ganancia neta (ya cubriste gastos)';
+    resultEl.textContent = fmt.format(delta);
+  } else {
+    resultTile.classList.remove('ok');
+    resultTile.classList.add('warn');
+    resultLabel.textContent = 'Te faltan para cubrir gastos';
+    resultEl.textContent = fmt.format(Math.abs(delta));
+  }
+}
+
 // ---------- Users tab ----------
 
 let VENDEDORES = [];
@@ -1247,6 +1391,8 @@ async function loadEverything() {
     renderSettings();
     renderReports();
     await renderSalesReport();
+    await loadFinance();
+    renderFinance();
     renderUsers();
     renderOrders();
     renderLayaways();
@@ -1276,6 +1422,7 @@ function subscribeRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'layaways' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'layaway_payments' }, scheduleReload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'fixed_expenses' }, scheduleReload)
     .subscribe();
 }
 

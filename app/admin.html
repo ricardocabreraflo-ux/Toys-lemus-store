@@ -79,6 +79,7 @@
     <button class="tab-btn" data-tab="promotions" type="button" aria-selected="false" data-role-admin>Promociones</button>
     <button class="tab-btn" data-tab="taxonomy" type="button" aria-selected="false" data-role-admin>Líneas y categorías</button>
     <button class="tab-btn" data-tab="reports" type="button" aria-selected="false" data-role-admin>Reportes</button>
+    <button class="tab-btn" data-tab="finance" type="button" aria-selected="false" data-role-admin>Finanzas</button>
     <button class="tab-btn" data-tab="users" type="button" aria-selected="false" data-role-admin>Usuarios</button>
     <button class="tab-btn" data-tab="settings" type="button" aria-selected="false" data-role-admin>Ajustes</button>
   </div>
@@ -429,6 +430,38 @@
         <tbody id="report-sales-tbody"></tbody>
       </table>
     </div>
+  </section>
+
+  <!-- ---------- Finanzas ---------- -->
+  <section class="tab-panel" id="tab-finance" hidden>
+    <div class="grid-head"><h2>Gastos fijos</h2></div>
+    <form class="add-form" id="expense-form">
+      <div class="field" style="grid-column: span 2;">
+        <label for="expense-name">Nombre</label>
+        <input class="cell-input" id="expense-name" type="text" required placeholder="Ej. Renta">
+      </div>
+      <div class="field">
+        <label for="expense-amount">Monto mensual</label>
+        <input class="cell-input" id="expense-amount" type="number" min="0" step="0.01" required>
+      </div>
+      <div class="submit-cell">
+        <button class="btn btn-primary btn-sm" type="submit">Agregar gasto</button>
+      </div>
+    </form>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Nombre</th><th>Monto mensual</th><th>Activo</th><th></th></tr></thead>
+        <tbody id="finance-expenses-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="grid-head"><h2>Punto de equilibrio de este mes</h2></div>
+    <div class="stat-row" id="finance-summary">
+      <div class="stat-tile"><strong id="finance-margin">—</strong><span>Ganancia de este mes</span></div>
+      <div class="stat-tile"><strong id="finance-expenses-total">—</strong><span>Gastos fijos activos</span></div>
+      <div class="stat-tile" id="finance-result-tile"><strong id="finance-result">—</strong><span id="finance-result-label">Punto de equilibrio</span></div>
+    </div>
+    <p id="finance-no-expenses-msg" hidden style="color:var(--ink-soft);">Agrega tus gastos fijos para ver tu punto de equilibrio este mes.</p>
   </section>
 
   <!-- ---------- Usuarios ---------- -->
