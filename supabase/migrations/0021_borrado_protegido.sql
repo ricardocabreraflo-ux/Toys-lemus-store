@@ -51,7 +51,7 @@ begin
     raise exception 'No autorizado';
   end if;
 
-  select channel into v_channel from public.sales where id = p_sale_id;
+  select channel into v_channel from public.sales where id = p_sale_id for update;
   if v_channel is null then
     raise exception 'Venta no encontrada';
   end if;
@@ -71,7 +71,7 @@ begin
 end;
 $$;
 
-revoke all on function public.delete_sale(uuid) from public;
+revoke all on function public.delete_sale(uuid) from public, anon;
 grant execute on function public.delete_sale(uuid) to authenticated;
 
 notify pgrst, 'reload schema';

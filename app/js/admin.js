@@ -72,7 +72,7 @@ function askForDeletePin(confirmMessage) {
   if (!window.confirm(confirmMessage)) return false;
   const entered = window.prompt('Escribe el código de seguridad para borrar:');
   if (entered === null) return false;
-  if (entered !== SECURITY_SETTINGS.delete_pin) {
+  if (entered.trim() !== SECURITY_SETTINGS.delete_pin) {
     showToast('Código incorrecto, no se borró nada', true);
     return false;
   }
@@ -475,6 +475,7 @@ async function loadRecentSales() {
     .from('sales')
     .select('id, total, created_at')
     .eq('channel', 'fisica')
+    .neq('payment_method', 'apartado')
     .order('created_at', { ascending: false })
     .limit(20);
   if (error) { console.error(error); return; }
@@ -482,6 +483,7 @@ async function loadRecentSales() {
 }
 
 function renderRecentSales() {
+  document.getElementById('recent-sales-action-header').hidden = CURRENT_ROLE !== 'admin';
   const tbody = document.getElementById('recent-sales-tbody');
   tbody.innerHTML = RECENT_PHYSICAL_SALES.length === 0
     ? `<tr><td colspan="3" style="color:var(--ink-soft);">Sin ventas físicas todavía.</td></tr>`
@@ -533,6 +535,7 @@ function orderStatusLabel(status) {
 }
 
 function renderOrders() {
+  document.getElementById('orders-delivered-action-header').hidden = CURRENT_ROLE !== 'admin';
   const pending = ORDERS.filter(o => o.status === 'pagado' || o.status === 'revisar_sin_stock');
   const delivered = ORDERS.filter(o => o.status === 'entregado');
 
