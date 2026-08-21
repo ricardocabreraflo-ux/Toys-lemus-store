@@ -490,9 +490,9 @@ function renderRecentSales() {
         <td>${new Date(s.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</td>
         <td>${fmt.format(s.total)}</td>
         <td>
-          <button class="icon-mini danger" data-role="sale-delete" type="button" aria-label="Eliminar venta">
+          ${CURRENT_ROLE === 'admin' ? `<button class="icon-mini danger" data-role="sale-delete" type="button" aria-label="Eliminar venta">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
-          </button>
+          </button>` : ''}
         </td>
       </tr>`).join('');
   tbody.querySelectorAll('[data-role="sale-delete"]').forEach(btn => {
@@ -548,9 +548,9 @@ function renderOrders() {
         <td>${orderStatusLabel(o.status)}</td>
         <td>
           ${(o.status === 'pagado' || o.status === 'revisar_sin_stock') ? `<button class="btn btn-primary btn-sm" type="button" data-role="deliver">Marcar entregado</button>` : ''}
-          <button class="icon-mini danger" data-role="order-delete" type="button" aria-label="Eliminar pedido" style="margin-left:6px;">
+          ${CURRENT_ROLE === 'admin' ? `<button class="icon-mini danger" data-role="order-delete" type="button" aria-label="Eliminar pedido" style="margin-left:6px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
-          </button>
+          </button>` : ''}
         </td>
       </tr>`).join('');
   pendingTbody.querySelectorAll('[data-role="deliver"]').forEach(btn => {
@@ -589,9 +589,9 @@ function renderOrders() {
         <td>${fmt.format(o.total)}</td>
         <td>${o.delivered_at ? new Date(o.delivered_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</td>
         <td>
-          <button class="icon-mini danger" data-role="order-delete" type="button" aria-label="Eliminar pedido">
+          ${CURRENT_ROLE === 'admin' ? `<button class="icon-mini danger" data-role="order-delete" type="button" aria-label="Eliminar pedido">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
-          </button>
+          </button>` : ''}
         </td>
       </tr>`).join('');
   deliveredTbody.querySelectorAll('[data-role="order-delete"]').forEach(btn => {
