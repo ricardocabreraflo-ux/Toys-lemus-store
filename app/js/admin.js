@@ -1163,7 +1163,7 @@ async function renderSalesReport() {
 
 async function computeCurrentMonthMargin() {
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const startOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01T00:00:00Z`;
   const { data: sales, error: salesErr } = await supabase
     .from('sales')
     .select('id, total, status')
@@ -1220,9 +1220,10 @@ function renderExpensesTable() {
       let value = input.value;
       if (field === 'monthly_amount') value = Math.max(0, Number(value) || 0);
       else value = value.trim();
-      const { error } = await supabase.from('fixed_expenses').update({ [field]: value }).eq('id', id);
-      if (error) { showToast('No se pudo guardar el cambio', true); return; }
       const local = FIXED_EXPENSES.find(e => e.id === id);
+      if (field === 'name' && !value) { input.value = local ? local.name : ''; return; }
+      const { data, error } = await supabase.from('fixed_expenses').update({ [field]: value }).eq('id', id).select();
+      if (error || !data || data.length === 0) { showToast('No se pudo guardar el cambio', true); return; }
       if (local) local[field] = value;
       renderFinance();
     });
@@ -1231,8 +1232,8 @@ function renderExpensesTable() {
   tbody.querySelectorAll('[data-role="expense-active"]').forEach(cb => {
     cb.addEventListener('change', async () => {
       const id = cb.closest('tr').dataset.id;
-      const { error } = await supabase.from('fixed_expenses').update({ active: cb.checked }).eq('id', id);
-      if (error) { showToast('No se pudo actualizar', true); cb.checked = !cb.checked; return; }
+      const { data, error } = await supabase.from('fixed_expenses').update({ active: cb.checked }).eq('id', id).select();
+      if (error || !data || data.length === 0) { showToast('No se pudo actualizar', true); cb.checked = !cb.checked; return; }
       const local = FIXED_EXPENSES.find(e => e.id === id);
       if (local) local.active = cb.checked;
       renderFinance();
@@ -1244,8 +1245,8 @@ function renderExpensesTable() {
       const id = btn.closest('tr').dataset.id;
       const expense = FIXED_EXPENSES.find(e => e.id === id);
       if (!expense || !confirm(`¿Eliminar el gasto "${expense.name}"?`)) return;
-      const { error } = await supabase.from('fixed_expenses').delete().eq('id', id);
-      if (error) { showToast('No se pudo eliminar', true); return; }
+      const { data, error } = await supabase.from('fixed_expenses').delete().eq('id', id).select();
+      if (error || !data || data.length === 0) { showToast('No se pudo eliminar', true); return; }
       FIXED_EXPENSES = FIXED_EXPENSES.filter(e => e.id !== id);
       renderFinance();
     });
@@ -1274,7 +1275,7 @@ function renderBreakEvenSummary() {
   const resultLabel = document.getElementById('finance-result-label');
   const delta = CURRENT_MONTH_MARGIN - expensesTotal;
 
-  if (delta >= 0) {
+  if (delta >= -0.005) {
     resultTile.classList.remove('warn');
     resultTile.classList.add('ok');
     resultLabel.textContent = 'Ganancia neta (ya cubriste gastos)';

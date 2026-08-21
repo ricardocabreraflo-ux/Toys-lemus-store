@@ -269,6 +269,7 @@ footer { border-top: 3px solid var(--ink); padding: 34px 24px 40px; background: 
 .tab-btn[aria-selected="true"] { color: var(--ink); border-color: var(--accent); }
 .tab-panel[hidden] { display: none; }
 .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.stat-row[hidden] { display: none; }
 .stat-tile { background: var(--panel); border: 2px solid var(--line); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow); }
 .stat-tile.warn strong { color: var(--stock-low); }
 .stat-tile.ok strong { color: var(--ok); }
