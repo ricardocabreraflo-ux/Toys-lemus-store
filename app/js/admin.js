@@ -15,6 +15,8 @@ let catFilter = 'all';
 let publishedOnly = false;
 let CURRENT_ROLE = null; // 'admin' | 'vendedor'
 let SITE_SETTINGS = { show_products_stat: false };
+let SECURITY_SETTINGS = { delete_pin: '0000' };
+let RECENT_PHYSICAL_SALES = [];
 
 initThemeToggle();
 
@@ -53,6 +55,28 @@ function showToast(msg, isError) {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+async function loadSecuritySettings() {
+  const { data, error } = await supabase.from('security_settings').select('*').single();
+  if (error) throw error;
+  return data;
+}
+
+// Shared by every deletion point in this file: browser confirm, then
+// a PIN prompt compared against SECURITY_SETTINGS.delete_pin. This is
+// an accidental-click guard, not a real access-control boundary (see
+// the design spec's threat-model note) — delete_sale's real gate is
+// public.is_admin() on the server.
+function askForDeletePin(confirmMessage) {
+  if (!window.confirm(confirmMessage)) return false;
+  const entered = window.prompt('Escribe el código de seguridad para borrar:');
+  if (entered === null) return false;
+  if (entered !== SECURITY_SETTINGS.delete_pin) {
+    showToast('Código incorrecto, no se borró nada', true);
+    return false;
+  }
+  return true;
 }
 
 // ---------- Tabs ----------
@@ -315,7 +339,7 @@ async function saveField(row, field, rawValue) {
 async function deleteProduct(id) {
   const p = productById(id);
   if (!p) return;
-  if (!confirm(`¿Eliminar "${p.name}" del catálogo? Esto no se puede deshacer.`)) return;
+  if (!askForDeletePin(`¿Eliminar "${p.name}" del catálogo? Esto no se puede deshacer.`)) return;
   const { error } = await supabase.from('products').delete().eq('id', id);
   if (error) { showToast('No se pudo eliminar', true); console.error(error); return; }
   PRODUCTS = PRODUCTS.filter(x => x.id !== id);
@@ -446,6 +470,48 @@ document.getElementById('sell-confirm-btn').addEventListener('click', async (e) 
   }
 });
 
+async function loadRecentSales() {
+  const { data, error } = await supabase
+    .from('sales')
+    .select('id, total, created_at')
+    .eq('channel', 'fisica')
+    .order('created_at', { ascending: false })
+    .limit(20);
+  if (error) { console.error(error); return; }
+  RECENT_PHYSICAL_SALES = data;
+}
+
+function renderRecentSales() {
+  const tbody = document.getElementById('recent-sales-tbody');
+  tbody.innerHTML = RECENT_PHYSICAL_SALES.length === 0
+    ? `<tr><td colspan="3" style="color:var(--ink-soft);">Sin ventas físicas todavía.</td></tr>`
+    : RECENT_PHYSICAL_SALES.map(s => `
+      <tr data-id="${s.id}">
+        <td>${new Date(s.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+        <td>${fmt.format(s.total)}</td>
+        <td>
+          <button class="icon-mini danger" data-role="sale-delete" type="button" aria-label="Eliminar venta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+          </button>
+        </td>
+      </tr>`).join('');
+  tbody.querySelectorAll('[data-role="sale-delete"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('tr').dataset.id;
+      if (!askForDeletePin('¿Eliminar esta venta? El stock vendido regresa al inventario.')) return;
+      const { error } = await supabase.rpc('delete_sale', { p_sale_id: id });
+      if (error) { showToast(error.message, true); return; }
+      showToast('Venta eliminada');
+      await loadRecentSales();
+      renderRecentSales();
+      await reloadProducts();
+      renderTable();
+      refreshSellProductOptions();
+      renderStats();
+    });
+  });
+}
+
 // ---------- Pedidos tab (online orders) ----------
 
 let ORDERS = [];
@@ -480,7 +546,12 @@ function renderOrders() {
         <td>${escapeHtml(o.customer_phone || '—')}</td>
         <td>${fmt.format(o.total)}</td>
         <td>${orderStatusLabel(o.status)}</td>
-        <td>${(o.status === 'pagado' || o.status === 'revisar_sin_stock') ? `<button class="btn btn-primary btn-sm" type="button" data-role="deliver">Marcar entregado</button>` : ''}</td>
+        <td>
+          ${(o.status === 'pagado' || o.status === 'revisar_sin_stock') ? `<button class="btn btn-primary btn-sm" type="button" data-role="deliver">Marcar entregado</button>` : ''}
+          <button class="icon-mini danger" data-role="order-delete" type="button" aria-label="Eliminar pedido" style="margin-left:6px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+          </button>
+        </td>
       </tr>`).join('');
   pendingTbody.querySelectorAll('[data-role="deliver"]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -492,18 +563,51 @@ function renderOrders() {
       renderOrders();
     });
   });
+  pendingTbody.querySelectorAll('[data-role="order-delete"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('tr').dataset.id;
+      if (!askForDeletePin('¿Eliminar este pedido? El stock vendido regresa al inventario.')) return;
+      const { error } = await supabase.rpc('delete_sale', { p_sale_id: id });
+      if (error) { showToast(error.message, true); return; }
+      showToast('Pedido eliminado');
+      await loadOrders();
+      renderOrders();
+      await reloadProducts();
+      renderTable();
+      renderStats();
+    });
+  });
 
   const deliveredTbody = document.getElementById('orders-delivered-tbody');
   deliveredTbody.innerHTML = delivered.length === 0
-    ? `<tr><td colspan="5" style="color:var(--ink-soft);">Sin entregas todavía.</td></tr>`
+    ? `<tr><td colspan="6" style="color:var(--ink-soft);">Sin entregas todavía.</td></tr>`
     : delivered.map(o => `
-      <tr>
+      <tr data-id="${o.id}">
         <td>${new Date(o.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</td>
         <td>${escapeHtml(o.customer_name || '—')}</td>
         <td>${escapeHtml(o.customer_phone || '—')}</td>
         <td>${fmt.format(o.total)}</td>
         <td>${o.delivered_at ? new Date(o.delivered_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</td>
+        <td>
+          <button class="icon-mini danger" data-role="order-delete" type="button" aria-label="Eliminar pedido">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+          </button>
+        </td>
       </tr>`).join('');
+  deliveredTbody.querySelectorAll('[data-role="order-delete"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('tr').dataset.id;
+      if (!askForDeletePin('¿Eliminar este pedido? El stock vendido regresa al inventario.')) return;
+      const { error } = await supabase.rpc('delete_sale', { p_sale_id: id });
+      if (error) { showToast(error.message, true); return; }
+      showToast('Pedido eliminado');
+      await loadOrders();
+      renderOrders();
+      await reloadProducts();
+      renderTable();
+      renderStats();
+    });
+  });
 }
 
 // ---------- Apartados tab ----------
@@ -1074,6 +1178,17 @@ function renderSettings() {
     if (error) { showToast('No se pudo actualizar', true); statCb.checked = !statCb.checked; return; }
     SITE_SETTINGS.show_products_stat = statCb.checked;
   };
+
+  const pinInput = document.getElementById('setting-delete-pin');
+  pinInput.value = SECURITY_SETTINGS.delete_pin;
+  pinInput.onchange = async () => {
+    const value = pinInput.value.trim();
+    if (!value) { pinInput.value = SECURITY_SETTINGS.delete_pin; return; }
+    const { error } = await supabase.from('security_settings').update({ delete_pin: value }).eq('id', true);
+    if (error) { showToast('No se pudo actualizar', true); pinInput.value = SECURITY_SETTINGS.delete_pin; return; }
+    SECURITY_SETTINGS.delete_pin = value;
+    showToast('Código actualizado');
+  };
 }
 
 function refreshAllLineDependentUI() {
@@ -1367,6 +1482,11 @@ async function loadEverything() {
     } catch (err) {
       console.error('No se pudo cargar site_settings, usando valores por defecto', err);
     }
+    try {
+      SECURITY_SETTINGS = await loadSecuritySettings();
+    } catch (err) {
+      console.error('No se pudo cargar security_settings, usando el PIN por defecto', err);
+    }
     await reloadProducts();
     const { data: promos, error: promoErr } = await supabase.from('promotions').select('*').order('created_at', { ascending: false });
     if (promoErr) throw promoErr;
@@ -1375,6 +1495,7 @@ async function loadEverything() {
     await loadVendedores();
     await loadOrders();
     await loadLayaways();
+    await loadRecentSales();
 
     initInventoryForm();
     initInventoryFilters();
@@ -1397,6 +1518,7 @@ async function loadEverything() {
     renderUsers();
     renderOrders();
     renderLayaways();
+    renderRecentSales();
   } catch (err) {
     showToast('No se pudo cargar el panel', true);
     console.error(err);
@@ -1424,6 +1546,7 @@ function subscribeRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'layaways' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'layaway_payments' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'fixed_expenses' }, scheduleReload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'security_settings' }, scheduleReload)
     .subscribe();
 }
 

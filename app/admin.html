@@ -206,6 +206,14 @@
     </div>
     <p class="form-error" id="sell-error"></p>
     <button class="btn btn-primary" type="button" id="sell-confirm-btn" style="margin-top:12px;">Confirmar venta</button>
+
+    <div class="grid-head" style="margin-top:32px;"><h2>Ventas recientes</h2></div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Fecha</th><th>Total</th><th></th></tr></thead>
+        <tbody id="recent-sales-tbody"></tbody>
+      </table>
+    </div>
   </section>
 
   <!-- ---------- Pedidos en línea ---------- -->
@@ -220,7 +228,7 @@
     <div class="grid-head"><h2>Entregados</h2></div>
     <div class="table-wrap">
       <table class="admin-table">
-        <thead><tr><th>Fecha</th><th>Cliente</th><th>Teléfono</th><th>Total</th><th>Entregado</th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Cliente</th><th>Teléfono</th><th>Total</th><th>Entregado</th><th></th></tr></thead>
         <tbody id="orders-delivered-tbody"></tbody>
       </table>
     </div>
@@ -502,6 +510,18 @@
           <tr>
             <td>Mostrar contador de "Productos activos"</td>
             <td><input type="checkbox" id="setting-show-stat"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid-head"><h2>Seguridad</h2></div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <tbody>
+          <tr>
+            <td>Código para borrar ventas y productos</td>
+            <td><input class="cell-input" id="setting-delete-pin" type="text" style="max-width:120px;"></td>
           </tr>
         </tbody>
       </table>
