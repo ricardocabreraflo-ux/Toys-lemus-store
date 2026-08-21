@@ -1163,7 +1163,7 @@ async function renderSalesReport() {
 
 async function computeCurrentMonthMargin() {
   const now = new Date();
-  const startOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01T00:00:00Z`;
+  const startOfMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01T00:00:00Z`;
   const { data: sales, error: salesErr } = await supabase
     .from('sales')
     .select('id, total, status')
