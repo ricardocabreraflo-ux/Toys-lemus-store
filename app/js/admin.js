@@ -18,6 +18,8 @@ let SITE_SETTINGS = { show_products_stat: false };
 let SECURITY_SETTINGS = { delete_pin: '0000' };
 let RECENT_PHYSICAL_SALES = [];
 let VENDEDOR_PERMISSIONS = { can_cancel_layaways: false };
+let SALES_REPORT_SALES = [];
+let SALES_REPORT_ITEMS = [];
 
 initThemeToggle();
 
@@ -1031,6 +1033,8 @@ document.getElementById('expense-form').addEventListener('submit', async (e) => 
   e.target.reset();
 });
 
+document.getElementById('report-period-filter').addEventListener('change', renderSalesDetailReport);
+
 function promoScopeLabel(p) {
   if (p.scope_type === 'line') return (lineById(p.product_line_id)?.name || '—') + ' (línea completa)';
   if (p.scope_type === 'product') {
@@ -1253,8 +1257,11 @@ async function renderSalesReport() {
 
   const { data: items, error: itemsErr } = await supabase
     .from('sale_items_view')
-    .select('sale_id, quantity, unit_price, unit_cost_price');
+    .select('sale_id, product_id, quantity, unit_price, unit_cost_price');
   if (itemsErr) { console.error(itemsErr); return; }
+
+  SALES_REPORT_SALES = sales;
+  SALES_REPORT_ITEMS = items;
 
   const bySale = new Map(items.map(i => [i.sale_id, []]));
   items.forEach(i => bySale.get(i.sale_id)?.push(i) ?? bySale.set(i.sale_id, [i]));
@@ -1282,6 +1289,73 @@ async function renderSalesReport() {
       <td>${fmt.format(r.cost)}</td>
       <td>${fmt.format(r.total - r.cost)}</td>
     </tr>`).join('') || `<tr><td colspan="6" style="color:var(--ink-soft);">Sin ventas todavía.</td></tr>`;
+
+  populateSalesPeriodFilter([...byMonth.keys()].sort((a, b) => b.localeCompare(a)));
+  renderSalesDetailReport();
+}
+
+function populateSalesPeriodFilter(months) {
+  const sel = document.getElementById('report-period-filter');
+  const current = sel.value;
+  sel.innerHTML = '<option value="all">Todos los periodos</option>' +
+    months.map(m => `<option value="${m}">${m}</option>`).join('');
+  sel.value = (current === 'all' || months.includes(current)) ? current : 'all';
+}
+
+function renderSalesDetailReport() {
+  const period = document.getElementById('report-period-filter').value;
+  const saleIds = new Set(
+    SALES_REPORT_SALES
+      .filter(s => period === 'all' || s.created_at.slice(0, 7) === period)
+      .map(s => s.id)
+  );
+
+  const byCategory = new Map(); // category_id -> { name, pieces, total, cost, saleIds: Set }
+  const byProduct = new Map();  // product_id -> { name, pieces, total, cost, saleIds: Set }
+
+  SALES_REPORT_ITEMS.forEach(item => {
+    if (!saleIds.has(item.sale_id) || !item.product_id) return;
+    const product = productById(item.product_id);
+    if (!product) return; // deleted/unavailable product — excluded per spec, still counted in the month table above
+
+    const revenue = Number(item.unit_price) * item.quantity;
+    const cost = (Number(item.unit_cost_price) || 0) * item.quantity;
+
+    const pEntry = byProduct.get(product.id) || { name: product.name, pieces: 0, total: 0, cost: 0, saleIds: new Set() };
+    pEntry.pieces += item.quantity;
+    pEntry.total += revenue;
+    pEntry.cost += cost;
+    pEntry.saleIds.add(item.sale_id);
+    byProduct.set(product.id, pEntry);
+
+    const cat = catById(product.category_id);
+    const catLabel = cat ? `${lineById(cat.product_line_id)?.name || ''} — ${cat.name}` : 'Sin categoría';
+    const catKey = product.category_id || 'none';
+    const cEntry = byCategory.get(catKey) || { name: catLabel, pieces: 0, total: 0, cost: 0, saleIds: new Set() };
+    cEntry.pieces += item.quantity;
+    cEntry.total += revenue;
+    cEntry.cost += cost;
+    cEntry.saleIds.add(item.sale_id);
+    byCategory.set(catKey, cEntry);
+  });
+
+  const renderGroupTable = (map, tbodyId, emptyMessage) => {
+    const rows = [...map.values()]
+      .map(r => ({ ...r, count: r.saleIds.size }))
+      .sort((a, b) => (b.total - b.cost) - (a.total - a.cost));
+    document.getElementById(tbodyId).innerHTML = rows.map(r => `
+      <tr>
+        <td>${escapeHtml(r.name)}</td>
+        <td>${r.count}</td>
+        <td>${r.pieces}</td>
+        <td>${fmt.format(r.total)}</td>
+        <td>${fmt.format(r.cost)}</td>
+        <td>${fmt.format(r.total - r.cost)}</td>
+      </tr>`).join('') || `<tr><td colspan="6" style="color:var(--ink-soft);">${emptyMessage}</td></tr>`;
+  };
+
+  renderGroupTable(byCategory, 'report-category-tbody', 'Sin ventas en este periodo.');
+  renderGroupTable(byProduct, 'report-product-tbody', 'Sin ventas en este periodo.');
 }
 
 // ---------- Finanzas tab ----------

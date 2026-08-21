@@ -432,10 +432,29 @@
       </table>
     </div>
     <div class="grid-head"><h2>Ventas por mes</h2></div>
-    <div class="table-wrap">
+    <div class="table-wrap" style="margin-bottom:32px;">
       <table class="admin-table">
         <thead><tr><th>Mes</th><th>Ventas</th><th>Piezas vendidas</th><th>Total vendido</th><th>Costo real</th><th>Ganancia real</th></tr></thead>
         <tbody id="report-sales-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="grid-head">
+      <h2>Ventas por categoría y producto</h2>
+      <select class="cell-input" id="report-period-filter" style="max-width:200px;">
+        <option value="all">Todos los periodos</option>
+      </select>
+    </div>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Categoría</th><th>Ventas</th><th>Piezas vendidas</th><th>Total vendido</th><th>Costo real</th><th>Ganancia real</th></tr></thead>
+        <tbody id="report-category-tbody"></tbody>
+      </table>
+    </div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Producto</th><th>Ventas</th><th>Piezas vendidas</th><th>Total vendido</th><th>Costo real</th><th>Ganancia real</th></tr></thead>
+        <tbody id="report-product-tbody"></tbody>
       </table>
     </div>
   </section>
