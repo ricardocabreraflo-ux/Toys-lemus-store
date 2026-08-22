@@ -325,3 +325,12 @@ select.cell-input { appearance: none; cursor: pointer; }
   .cat-rail { top: 0; }
   .cat-rail-secondary { top: 56px; }
 }
+
+#print-inventory { display: none; }
+@media print {
+  body > *:not(#print-inventory) { display: none !important; }
+  #print-inventory { display: block !important; padding: 24px; }
+  #print-inventory h1 { font-size: 1.3rem; margin-bottom: 4px; }
+  #print-inventory table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  #print-inventory th, #print-inventory td { border: 1px solid #000; padding: 4px 8px; font-size: 11px; text-align: left; }
+}

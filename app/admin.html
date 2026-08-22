@@ -146,7 +146,30 @@
       <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;color:var(--ink-soft);">
         <input type="checkbox" id="admin-published-filter" style="width:auto;"> Solo publicados
       </label>
+      <button class="btn btn-sm" type="button" id="export-pdf-btn">Exportar a PDF</button>
       <span class="count" id="admin-count" style="margin-left:auto;"></span>
+    </div>
+
+    <div class="toolbar" id="export-pdf-panel" hidden>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
+        <input type="checkbox" class="export-col" data-col="line_cat" checked style="width:auto;"> Línea / Categoría
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
+        <input type="checkbox" class="export-col" data-col="code" checked style="width:auto;"> Código
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
+        <input type="checkbox" class="export-col" data-col="price" checked style="width:auto;"> Precio
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
+        <input type="checkbox" class="export-col" data-col="stock_online" checked style="width:auto;"> Stock online
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
+        <input type="checkbox" class="export-col" data-col="stock_fisica" checked style="width:auto;"> Stock física
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
+        <input type="checkbox" class="export-col" data-col="published" checked style="width:auto;"> Publicado
+      </label>
+      <button class="btn btn-primary btn-sm" type="button" id="export-pdf-generate">Generar PDF</button>
     </div>
 
     <div class="table-wrap">
@@ -561,6 +584,8 @@
 </main>
 
 <div class="toast" id="toast"></div>
+
+<div id="print-inventory"></div>
 
 <script src="js/vendor/supabase.umd.js"></script>
 <script type="module" src="js/admin.js"></script>

@@ -244,6 +244,43 @@ function matchesFilters(p) {
   return lineOk && catOk && pubOk && qOk;
 }
 
+// Costo is deliberately never in this list — it's sensitive data and
+// must never be exportable via this feature, by design (see the spec).
+const EXPORT_COLUMNS = [
+  { key: 'line_cat', label: 'Línea / Categoría', render: p => `${escapeHtml(lineById(p.product_line_id)?.name || '')} — ${escapeHtml(catById(p.category_id)?.name || '')}` },
+  { key: 'code', label: 'Código', render: p => escapeHtml(p.code || '') },
+  { key: 'price', label: 'Precio', render: p => fmt.format(p.price) },
+  { key: 'stock_online', label: 'Stock online', render: p => String(p.stock_online) },
+  { key: 'stock_fisica', label: 'Stock física', render: p => String(p.stock_fisica) },
+  { key: 'published', label: 'Publicado', render: p => (p.published_online ? 'Sí' : 'No') },
+];
+
+document.getElementById('export-pdf-btn').addEventListener('click', () => {
+  const panel = document.getElementById('export-pdf-panel');
+  panel.hidden = !panel.hidden;
+});
+
+document.getElementById('export-pdf-generate').addEventListener('click', () => {
+  const selectedKeys = Array.from(document.querySelectorAll('.export-col:checked')).map(cb => cb.dataset.col);
+  const columns = EXPORT_COLUMNS.filter(c => selectedKeys.includes(c.key));
+  const filtered = PRODUCTS.filter(matchesFilters);
+
+  const headerCells = ['Nombre', ...columns.map(c => c.label)]
+    .map(h => `<th>${escapeHtml(h)}</th>`).join('');
+  const bodyRows = filtered.length === 0
+    ? `<tr><td colspan="${columns.length + 1}">Sin productos con este filtro.</td></tr>`
+    : filtered.map(p => `<tr><td>${escapeHtml(p.name)}</td>${columns.map(c => `<td>${c.render(p)}</td>`).join('')}</tr>`).join('');
+
+  document.getElementById('print-inventory').innerHTML = `
+    <h1>Inventario — Lemus Store</h1>
+    <p>${new Date().toLocaleDateString('es-MX', { dateStyle: 'long' })}</p>
+    <table>
+      <thead><tr>${headerCells}</tr></thead>
+      <tbody>${bodyRows}</tbody>
+    </table>`;
+  window.print();
+});
+
 function lineCategoryCellHtml(p, dis) {
   const cats = catsForLine(p.product_line_id);
   const lineOpts = LINES.map(l => `<option value="${l.id}" ${l.id === p.product_line_id ? 'selected' : ''}>${escapeHtml(l.name)}</option>`).join('');
