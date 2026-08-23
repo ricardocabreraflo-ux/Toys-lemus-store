@@ -948,6 +948,152 @@ function renderTransfers() {
     </tr>`).join('');
 }
 
+// ---------- Conteo tab ----------
+
+let COUNT_ITEMS = []; // [{ product_id, counted }]
+
+function addToCount(productId) {
+  const existing = COUNT_ITEMS.find(i => i.product_id === productId);
+  if (existing) existing.counted += 1;
+  else COUNT_ITEMS.push({ product_id: productId, counted: 1 });
+  renderCountItems();
+  document.getElementById('count-diff-wrap').hidden = true;
+}
+
+function renderCountSuggestions(query) {
+  const list = document.getElementById('count-suggestions');
+  const q = query.trim().toLowerCase();
+  if (!q) { list.hidden = true; list.innerHTML = ''; return; }
+  const matches = PRODUCTS.filter(p => p.name.toLowerCase().includes(q)).slice(0, 8);
+  if (matches.length === 0) { list.hidden = true; list.innerHTML = ''; return; }
+  list.innerHTML = matches.map(p =>
+    `<button type="button" class="autocomplete-item" data-id="${p.id}">${escapeHtml(p.name)}</button>`
+  ).join('');
+  list.hidden = false;
+}
+
+document.getElementById('count-search').addEventListener('input', (e) => {
+  const raw = e.target.value;
+  const q = raw.trim().toLowerCase();
+  const list = document.getElementById('count-suggestions');
+  if (!q) { list.hidden = true; list.innerHTML = ''; return; }
+
+  const exact = PRODUCTS.find(p => (p.code || '').toLowerCase() === q);
+  if (exact) {
+    addToCount(exact.id);
+    e.target.value = '';
+    list.hidden = true;
+    list.innerHTML = '';
+    return;
+  }
+  renderCountSuggestions(raw);
+});
+
+document.getElementById('count-search').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const raw = e.target.value.trim();
+  if (!raw) return;
+  const list = document.getElementById('count-suggestions');
+  if (!list.hidden && list.children.length > 0) return; // hay coincidencias por nombre, se elige con clic
+  showToast('Producto no encontrado', true);
+  e.target.value = '';
+  list.hidden = true;
+  list.innerHTML = '';
+});
+
+document.getElementById('count-suggestions').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-id]');
+  if (!btn) return;
+  addToCount(btn.dataset.id);
+  document.getElementById('count-search').value = '';
+  document.getElementById('count-suggestions').hidden = true;
+  document.getElementById('count-suggestions').innerHTML = '';
+  document.getElementById('count-search').focus();
+});
+
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('count-search-wrap');
+  const list = document.getElementById('count-suggestions');
+  if (!list.hidden && !wrap.contains(e.target)) list.hidden = true;
+});
+
+function renderCountItems() {
+  const tbody = document.getElementById('count-items-tbody');
+  if (COUNT_ITEMS.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3" style="color:var(--ink-soft);">Todavía no has contado ningún producto.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = COUNT_ITEMS.map((item, idx) => {
+    const p = productById(item.product_id);
+    return `<tr>
+      <td>${escapeHtml(p?.name || '—')}</td>
+      <td><input class="cell-input" type="number" min="0" step="1" value="${item.counted}" data-idx="${idx}" style="max-width:100px;"></td>
+      <td><button class="icon-mini danger" type="button" data-idx="${idx}" aria-label="Quitar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button></td>
+    </tr>`;
+  }).join('');
+  tbody.querySelectorAll('input[data-idx]').forEach(input => {
+    input.addEventListener('change', () => {
+      const idx = Number(input.dataset.idx);
+      const val = Math.max(0, Math.round(Number(input.value) || 0));
+      COUNT_ITEMS[idx].counted = val;
+      input.value = val;
+    });
+  });
+  tbody.querySelectorAll('button[data-idx]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      COUNT_ITEMS.splice(Number(btn.dataset.idx), 1);
+      renderCountItems();
+    });
+  });
+}
+
+document.getElementById('count-finish-btn').addEventListener('click', () => {
+  if (COUNT_ITEMS.length === 0) {
+    showToast('Agrega al menos un producto al conteo', true);
+    return;
+  }
+  const tbody = document.getElementById('count-diff-tbody');
+  tbody.innerHTML = COUNT_ITEMS.map(item => {
+    const p = productById(item.product_id);
+    const actual = p?.stock_fisica ?? 0;
+    const diff = item.counted - actual;
+    return `<tr class="${diff !== 0 ? 'low-stock' : ''}">
+      <td>${escapeHtml(p?.name || '—')}</td>
+      <td>${actual}</td>
+      <td>${item.counted}</td>
+      <td>${diff > 0 ? '+' : ''}${diff}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('count-diff-wrap').hidden = false;
+});
+
+document.getElementById('count-apply-btn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  if (COUNT_ITEMS.length === 0) return;
+  btn.disabled = true;
+  try {
+    const { error } = await supabase.rpc('apply_inventory_count', {
+      p_items: COUNT_ITEMS.map(i => ({ product_id: i.product_id, counted: i.counted })),
+    });
+    if (error) { showToast('No se pudo aplicar el conteo, ningún producto se actualizó', true); console.error(error); return; }
+
+    showToast('Conteo aplicado, stock física actualizado');
+    COUNT_ITEMS = [];
+    renderCountItems();
+    document.getElementById('count-diff-wrap').hidden = true;
+    await reloadProducts();
+    renderTable();
+    refreshSellProductOptions();
+    refreshTransferProductOptions();
+    refreshLayawayProductOptions();
+    renderStats();
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 // ---------- Promotions tab ----------
 
 let selectedPromoProductId = null;

@@ -75,6 +75,7 @@
     <button class="tab-btn" data-tab="sell" type="button" aria-selected="false" data-role-admin data-role-vendedor>Vender</button>
     <button class="tab-btn" data-tab="orders" type="button" aria-selected="false" data-role-admin data-role-vendedor>Pedidos</button>
     <button class="tab-btn" data-tab="layaways" type="button" aria-selected="false" data-role-admin data-role-vendedor>Apartados</button>
+    <button class="tab-btn" data-tab="count" type="button" aria-selected="false" data-role-admin data-role-vendedor>Conteo</button>
     <button class="tab-btn" data-tab="transfers" type="button" aria-selected="false" data-role-admin>Traspasos</button>
     <button class="tab-btn" data-tab="promotions" type="button" aria-selected="false" data-role-admin>Promociones</button>
     <button class="tab-btn" data-tab="taxonomy" type="button" aria-selected="false" data-role-admin>Líneas y categorías</button>
@@ -306,6 +307,35 @@
         <thead><tr><th>Fecha límite</th><th>Cliente</th><th>Total</th><th>Estado</th></tr></thead>
         <tbody id="layaways-history-tbody"></tbody>
       </table>
+    </div>
+  </section>
+
+  <!-- ---------- Conteo físico ---------- -->
+  <section class="tab-panel" id="tab-count" hidden>
+    <div class="grid-head"><h2>Conteo físico de inventario</h2></div>
+    <div class="autocomplete-wrap" id="count-search-wrap">
+      <input class="cell-input" id="count-search" type="text" autocomplete="off" placeholder="Escanea el código o escribe el nombre del producto…">
+      <div class="autocomplete-list" id="count-suggestions" hidden></div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:16px;">
+      <table class="admin-table">
+        <thead><tr><th>Producto</th><th>Contado</th><th></th></tr></thead>
+        <tbody id="count-items-tbody"></tbody>
+      </table>
+    </div>
+
+    <button class="btn btn-primary" type="button" id="count-finish-btn" style="margin-top:12px;">Finalizar conteo</button>
+
+    <div id="count-diff-wrap" hidden>
+      <div class="grid-head" style="margin-top:32px;"><h2>Resultado del conteo</h2></div>
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>Producto</th><th>Stock actual</th><th>Contado</th><th>Diferencia</th></tr></thead>
+          <tbody id="count-diff-tbody"></tbody>
+        </table>
+      </div>
+      <button class="btn btn-primary" type="button" id="count-apply-btn" style="margin-top:12px;">Aplicar todo</button>
     </div>
   </section>
 
