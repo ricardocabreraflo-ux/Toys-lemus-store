@@ -1039,11 +1039,13 @@ function renderCountItems() {
       const val = Math.max(0, Math.round(Number(input.value) || 0));
       COUNT_ITEMS[idx].counted = val;
       input.value = val;
+      document.getElementById('count-diff-wrap').hidden = true;
     });
   });
   tbody.querySelectorAll('button[data-idx]').forEach(btn => {
     btn.addEventListener('click', () => {
       COUNT_ITEMS.splice(Number(btn.dataset.idx), 1);
+      document.getElementById('count-diff-wrap').hidden = true;
       renderCountItems();
     });
   });
