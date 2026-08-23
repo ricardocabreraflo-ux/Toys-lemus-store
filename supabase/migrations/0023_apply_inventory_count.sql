@@ -39,7 +39,7 @@ begin
 end;
 $$;
 
-revoke all on function public.apply_inventory_count(jsonb) from public;
+revoke all on function public.apply_inventory_count(jsonb) from public, anon, authenticated;
 grant execute on function public.apply_inventory_count(jsonb) to authenticated;
 
 notify pgrst, 'reload schema';

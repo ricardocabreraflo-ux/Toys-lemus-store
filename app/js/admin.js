@@ -979,7 +979,11 @@ document.getElementById('count-search').addEventListener('input', (e) => {
   if (!q) { list.hidden = true; list.innerHTML = ''; return; }
 
   const exact = PRODUCTS.find(p => (p.code || '').toLowerCase() === q);
-  if (exact) {
+  const ambiguous = exact && PRODUCTS.some(p => {
+    const c = (p.code || '').toLowerCase();
+    return c !== q && c.startsWith(q);
+  });
+  if (exact && !ambiguous) {
     addToCount(exact.id);
     e.target.value = '';
     list.hidden = true;
@@ -994,6 +998,14 @@ document.getElementById('count-search').addEventListener('keydown', (e) => {
   const raw = e.target.value.trim();
   if (!raw) return;
   const list = document.getElementById('count-suggestions');
+  const exactOnEnter = PRODUCTS.find(p => (p.code || '').toLowerCase() === raw.toLowerCase());
+  if (exactOnEnter) {
+    addToCount(exactOnEnter.id);
+    e.target.value = '';
+    list.hidden = true;
+    list.innerHTML = '';
+    return;
+  }
   if (!list.hidden && list.children.length > 0) return; // hay coincidencias por nombre, se elige con clic
   showToast('Producto no encontrado', true);
   e.target.value = '';
@@ -1074,6 +1086,8 @@ document.getElementById('count-finish-btn').addEventListener('click', () => {
 document.getElementById('count-apply-btn').addEventListener('click', async (e) => {
   const btn = e.currentTarget;
   if (COUNT_ITEMS.length === 0) return;
+  const ok = window.confirm(`¿Aplicar el conteo a ${COUNT_ITEMS.length} productos? Esta acción actualizará el stock física y no se puede deshacer.`);
+  if (!ok) return;
   btn.disabled = true;
   try {
     const { error } = await supabase.rpc('apply_inventory_count', {
