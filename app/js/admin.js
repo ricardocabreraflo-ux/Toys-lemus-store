@@ -1133,6 +1133,7 @@ async function scanCountCameraLoop() {
   while (countScanLoopActive) {
     try {
       const codes = await countBarcodeDetector.detect(video);
+      if (!countScanLoopActive) break;
       if (codes.length > 0) {
         const raw = codes[0].rawValue;
         const now = Date.now();
@@ -1152,17 +1153,21 @@ async function scanCountCameraLoop() {
 }
 
 async function startCountCamera() {
+  const btn = document.getElementById('count-camera-btn');
+  btn.disabled = true;
   try {
     countCameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
   } catch (err) {
     showToast('No se pudo acceder a la cámara', true);
     console.error(err);
+    btn.disabled = false;
     return;
   }
   const video = document.getElementById('count-camera-video');
   video.srcObject = countCameraStream;
   video.hidden = false;
-  document.getElementById('count-camera-btn').textContent = 'Cerrar cámara';
+  btn.textContent = 'Cerrar cámara';
+  btn.disabled = false;
   countBarcodeDetector = countBarcodeDetector || new BarcodeDetector();
   countScanLoopActive = true;
   scanCountCameraLoop();
@@ -1170,6 +1175,7 @@ async function startCountCamera() {
 
 function stopCountCamera() {
   countScanLoopActive = false;
+  lastScannedCode = null;
   if (countCameraStream) {
     countCameraStream.getTracks().forEach(track => track.stop());
     countCameraStream = null;
