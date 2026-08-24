@@ -94,6 +94,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.setAttribute('aria-selected', String(b === btn)));
     document.querySelectorAll('.tab-panel').forEach(p => { p.hidden = p.id !== `tab-${btn.dataset.tab}`; });
+    if (btn.dataset.tab !== 'count') stopCountCamera();
   });
 });
 
@@ -1108,6 +1109,80 @@ document.getElementById('count-apply-btn').addEventListener('click', async (e) =
   } finally {
     btn.disabled = false;
   }
+});
+
+let countCameraStream = null;
+let countBarcodeDetector = null;
+let countScanLoopActive = false;
+let lastScannedCode = null;
+let lastScannedAt = 0;
+
+if ('BarcodeDetector' in window) {
+  document.getElementById('count-camera-btn').hidden = false;
+}
+
+function handleCountScanValue(raw) {
+  const q = raw.trim().toLowerCase();
+  const match = PRODUCTS.find(p => (p.code || '').toLowerCase() === q);
+  if (match) { addToCount(match.id); return; }
+  showToast('Producto no encontrado', true);
+}
+
+async function scanCountCameraLoop() {
+  const video = document.getElementById('count-camera-video');
+  while (countScanLoopActive) {
+    try {
+      const codes = await countBarcodeDetector.detect(video);
+      if (codes.length > 0) {
+        const raw = codes[0].rawValue;
+        const now = Date.now();
+        if (raw !== lastScannedCode || now - lastScannedAt > 1500) {
+          lastScannedCode = raw;
+          lastScannedAt = now;
+          handleCountScanValue(raw);
+        }
+      }
+    } catch (err) {
+      // detect() can throw transiently if the video frame isn't ready
+      // yet (e.g. right after starting the stream) — ignore and retry
+      // on the next tick rather than aborting the whole loop.
+    }
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+}
+
+async function startCountCamera() {
+  try {
+    countCameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+  } catch (err) {
+    showToast('No se pudo acceder a la cámara', true);
+    console.error(err);
+    return;
+  }
+  const video = document.getElementById('count-camera-video');
+  video.srcObject = countCameraStream;
+  video.hidden = false;
+  document.getElementById('count-camera-btn').textContent = 'Cerrar cámara';
+  countBarcodeDetector = countBarcodeDetector || new BarcodeDetector();
+  countScanLoopActive = true;
+  scanCountCameraLoop();
+}
+
+function stopCountCamera() {
+  countScanLoopActive = false;
+  if (countCameraStream) {
+    countCameraStream.getTracks().forEach(track => track.stop());
+    countCameraStream = null;
+  }
+  const video = document.getElementById('count-camera-video');
+  video.srcObject = null;
+  video.hidden = true;
+  document.getElementById('count-camera-btn').textContent = 'Escanear con cámara';
+}
+
+document.getElementById('count-camera-btn').addEventListener('click', () => {
+  if (countCameraStream) stopCountCamera();
+  else startCountCamera();
 });
 
 // ---------- Promotions tab ----------
