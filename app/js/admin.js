@@ -137,6 +137,7 @@ async function refreshAuthUI() {
       loginView.hidden = false;
       adminView.hidden = true;
       logoutBtn.hidden = true;
+      stopCountCamera();
       return;
     }
     CURRENT_ROLE = profile.role;
@@ -151,6 +152,7 @@ async function refreshAuthUI() {
     loginView.hidden = false;
     adminView.hidden = true;
     logoutBtn.hidden = true;
+    stopCountCamera();
   }
 }
 
@@ -185,6 +187,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 });
 
 logoutBtn.addEventListener('click', async () => {
+  stopCountCamera();
   await supabase.auth.signOut();
   refreshAuthUI();
 });
@@ -1116,6 +1119,11 @@ let countBarcodeDetector = null;
 let countScanLoopActive = false;
 let lastScannedCode = null;
 let lastScannedAt = 0;
+// Bumped every time a start/stop cycle begins so an in-flight
+// startCountCamera() call can detect it has been superseded (by a stop,
+// or by a newer start) once its awaited promises resolve, and so a stale
+// scan loop instance can notice it's no longer the current one.
+let countCameraGen = 0;
 
 if ('BarcodeDetector' in window) {
   document.getElementById('count-camera-btn').hidden = false;
@@ -1128,12 +1136,13 @@ function handleCountScanValue(raw) {
   showToast('Producto no encontrado', true);
 }
 
-async function scanCountCameraLoop() {
+async function scanCountCameraLoop(myGen) {
   const video = document.getElementById('count-camera-video');
-  while (countScanLoopActive) {
+  let failureCount = 0;
+  while (countScanLoopActive && myGen === countCameraGen) {
     try {
       const codes = await countBarcodeDetector.detect(video);
-      if (!countScanLoopActive) break;
+      if (!countScanLoopActive || myGen !== countCameraGen) break;
       if (codes.length > 0) {
         const raw = codes[0].rawValue;
         const now = Date.now();
@@ -1143,37 +1152,66 @@ async function scanCountCameraLoop() {
           handleCountScanValue(raw);
         }
       }
+      failureCount = 0;
     } catch (err) {
       // detect() can throw transiently if the video frame isn't ready
       // yet (e.g. right after starting the stream) — ignore and retry
-      // on the next tick rather than aborting the whole loop.
+      // on the next tick rather than aborting the whole loop, but log it
+      // so a persistent failure isn't completely silent (this feature has
+      // no automated test coverage, so diagnostics matter here).
+      failureCount++;
+      if (failureCount === 1 || failureCount % 20 === 0) {
+        console.error('Conteo: fallo en detect() de código de barras', err);
+      }
     }
     await new Promise(resolve => setTimeout(resolve, 250));
   }
 }
 
 async function startCountCamera() {
+  const myGen = ++countCameraGen;
   const btn = document.getElementById('count-camera-btn');
   btn.disabled = true;
+
+  if (!countBarcodeDetector) {
+    try {
+      countBarcodeDetector = new BarcodeDetector();
+    } catch (err) {
+      showToast('No se pudo iniciar el lector de códigos', true);
+      console.error(err);
+      if (myGen === countCameraGen) btn.disabled = false;
+      return;
+    }
+  }
+
+  let stream;
   try {
-    countCameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
   } catch (err) {
     showToast('No se pudo acceder a la cámara', true);
     console.error(err);
-    btn.disabled = false;
+    if (myGen === countCameraGen) btn.disabled = false;
     return;
   }
+  if (myGen !== countCameraGen) {
+    // Superseded by a stop (or another start) while we were awaiting
+    // permission/camera warm-up — don't activate anything, just release
+    // the stream we ended up acquiring.
+    stream.getTracks().forEach(track => track.stop());
+    return;
+  }
+  countCameraStream = stream;
   const video = document.getElementById('count-camera-video');
   video.srcObject = countCameraStream;
   video.hidden = false;
   btn.textContent = 'Cerrar cámara';
   btn.disabled = false;
-  countBarcodeDetector = countBarcodeDetector || new BarcodeDetector();
   countScanLoopActive = true;
-  scanCountCameraLoop();
+  scanCountCameraLoop(myGen);
 }
 
 function stopCountCamera() {
+  countCameraGen++;
   countScanLoopActive = false;
   lastScannedCode = null;
   if (countCameraStream) {
@@ -1183,7 +1221,14 @@ function stopCountCamera() {
   const video = document.getElementById('count-camera-video');
   video.srcObject = null;
   video.hidden = true;
-  document.getElementById('count-camera-btn').textContent = 'Escanear con cámara';
+  const btn = document.getElementById('count-camera-btn');
+  btn.textContent = 'Escanear con cámara';
+  // stopCountCamera can be called while a startCountCamera() is still
+  // mid-flight (tab switch / logout during the getUserMedia await), in
+  // which case the button is currently disabled and that in-flight call
+  // will discard its result without touching button state — so always
+  // restore it here to guarantee the button never gets stuck disabled.
+  btn.disabled = false;
 }
 
 document.getElementById('count-camera-btn').addEventListener('click', () => {
