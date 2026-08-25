@@ -90,23 +90,44 @@ function askForDeletePin(confirmMessage) {
 
 // ---------- Tabs ----------
 
+function setActiveTab(tabKey) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tabKey)));
+  document.querySelectorAll('.tab-panel').forEach(p => { p.hidden = p.id !== `tab-${tabKey}`; });
+  if (tabKey !== 'count') stopCountCamera();
+  closeMoreSheet();
+}
+
 document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.setAttribute('aria-selected', String(b === btn)));
-    document.querySelectorAll('.tab-panel').forEach(p => { p.hidden = p.id !== `tab-${btn.dataset.tab}`; });
-    if (btn.dataset.tab !== 'count') stopCountCamera();
-  });
+  btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
 });
+
+function openMoreSheet() {
+  document.getElementById('more-backdrop').hidden = false;
+  document.getElementById('more-sheet').hidden = false;
+  document.getElementById('more-nav-btn').setAttribute('aria-expanded', 'true');
+}
+function closeMoreSheet() {
+  document.getElementById('more-backdrop').hidden = true;
+  document.getElementById('more-sheet').hidden = true;
+  document.getElementById('more-nav-btn').setAttribute('aria-expanded', 'false');
+}
+document.getElementById('more-nav-btn').addEventListener('click', () => {
+  const isOpen = document.getElementById('more-nav-btn').getAttribute('aria-expanded') === 'true';
+  if (isOpen) closeMoreSheet(); else openMoreSheet();
+});
+document.getElementById('more-backdrop').addEventListener('click', closeMoreSheet);
+document.getElementById('more-sheet-close').addEventListener('click', closeMoreSheet);
 
 function applyRoleVisibility() {
   document.querySelectorAll('.tab-btn').forEach(btn => {
-    const allowed = btn.hasAttribute(`data-role-${CURRENT_ROLE}`);
-    btn.hidden = !allowed;
+    btn.hidden = !btn.hasAttribute(`data-role-${CURRENT_ROLE}`);
   });
   const activeBtn = document.querySelector('.tab-btn[aria-selected="true"]');
-  if (!activeBtn || activeBtn.hidden) {
+  const activeKey = activeBtn ? activeBtn.dataset.tab : null;
+  const activeStillVisible = activeKey && document.querySelector(`.tab-btn[data-tab="${activeKey}"]:not([hidden])`);
+  if (!activeStillVisible) {
     const firstVisible = document.querySelector('.tab-btn:not([hidden])');
-    if (firstVisible) firstVisible.click();
+    if (firstVisible) setActiveTab(firstVisible.dataset.tab);
   }
 }
 

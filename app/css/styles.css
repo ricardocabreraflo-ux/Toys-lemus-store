@@ -263,12 +263,51 @@ footer { border-top: 3px solid var(--ink); padding: 34px 24px 40px; background: 
 .foot-inner p { color: var(--ink-soft); font-size: 0.88rem; margin: 0; }
 
 /* ---------- Admin ---------- */
-.admin-main { padding: 32px 0 100px; }
-.tab-row { display: flex; gap: 6px; overflow-x: auto; border-bottom: 2px solid var(--line); margin-bottom: 22px; }
-.tab-btn { flex-shrink: 0; border: none; background: none; padding: 10px 16px; font-weight: 700; font-size: 0.92rem; color: var(--ink-soft); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: color 0.12s ease, border-color 0.12s ease; }
-.tab-btn:hover { color: var(--ink); }
-.tab-btn[aria-selected="true"] { color: var(--ink); border-color: var(--accent); }
+.admin-shell { max-width: 1180px; margin: 0 auto; padding: 24px 24px 100px; display: flex; gap: 28px; align-items: flex-start; }
+.admin-content { flex: 1; min-width: 0; }
 .tab-panel[hidden] { display: none; }
+
+.admin-sidebar { flex: none; width: 220px; position: sticky; top: 90px; display: flex; flex-direction: column; gap: 2px; }
+.sidebar-brand { font-family: 'Baloo 2'; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; padding: 4px 10px 14px; }
+.sidebar-mark { font-size: 1.3rem; }
+.nav-group-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); margin: 14px 0 4px; padding: 0 10px; }
+.nav-group-label:first-of-type { margin-top: 6px; }
+
+.tab-btn { display: flex; align-items: center; gap: 10px; border: none; background: none; cursor: pointer; font-family: 'Karla'; font-weight: 700; font-size: 0.92rem; color: var(--ink-soft); text-align: left; transition: color 0.12s ease, background 0.12s ease; }
+.tab-btn[hidden] { display: none; }
+.tab-btn .icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+.tab-btn.nav-item { padding: 9px 10px; border-radius: 10px; }
+.tab-btn.nav-item:hover { color: var(--ink); background: var(--bg-alt); }
+.tab-btn.nav-item[aria-selected="true"] { color: var(--accent-ink); background: var(--accent); }
+
+.tab-btn.nav-bn-item { flex-direction: column; gap: 3px; padding: 6px 4px; font-size: 0.62rem; border-radius: 10px; }
+.tab-btn.nav-bn-item[aria-selected="true"] { color: var(--accent); }
+#more-nav-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px; border: none; background: none; cursor: pointer; font-family: 'Karla'; font-weight: 700; font-size: 0.62rem; color: var(--ink-soft); border-radius: 10px; }
+#more-nav-btn .icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#more-nav-btn[aria-expanded="true"] { color: var(--accent); }
+
+.admin-bottomnav { display: none; }
+
+.more-backdrop { position: fixed; inset: 0; background: rgba(31,42,68,0.35); z-index: 46; }
+.more-backdrop[hidden] { display: none; }
+.more-sheet {
+  display: flex; flex-direction: column; gap: 2px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 47;
+  background: var(--panel); border-radius: 20px 20px 0 0; padding: 10px 14px calc(14px + env(safe-area-inset-bottom));
+  max-height: 70vh; overflow-y: auto; box-shadow: var(--shadow-lg);
+}
+.more-sheet[hidden] { display: none; }
+.more-sheet-head { display: flex; align-items: center; justify-content: space-between; font-family: 'Baloo 2'; font-size: 1.05rem; padding: 4px 6px 10px; }
+
+@media (max-width: 640px) {
+  .admin-shell { flex-direction: column; padding: 16px 16px 84px; gap: 0; }
+  .admin-sidebar { display: none; }
+  .admin-bottomnav {
+    display: flex; justify-content: space-around; align-items: center;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+    background: var(--panel); border-top: 2px solid var(--line); padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+  }
+}
 .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 32px; }
 .stat-row[hidden] { display: none; }
 .stat-tile { background: var(--panel); border: 2px solid var(--line); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow); }
