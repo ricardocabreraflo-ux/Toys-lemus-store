@@ -228,12 +228,74 @@ function optionsForCategories(selectEl, lineId, { placeholder } = {}) {
 
 // ---------- Stats ----------
 
-function renderStats() {
-  document.getElementById('stat-total').textContent = PRODUCTS.length;
-  const value = PRODUCTS.reduce((s, p) => s + p.price * (p.stock_online + p.stock_fisica), 0);
-  document.getElementById('stat-value').textContent = fmt.format(value);
-  document.getElementById('stat-low').textContent = PRODUCTS.filter(p => p.stock_online === 1).length;
-  document.getElementById('stat-oos').textContent = PRODUCTS.filter(p => p.stock_online === 0).length;
+function startOfWeek(d) {
+  const day = d.getDay(); // 0=domingo..6=sábado
+  const diff = day === 0 ? -6 : 1 - day; // semana empieza en lunes
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
+}
+
+function renderDashboard() {
+  const isAdmin = CURRENT_ROLE === 'admin';
+  const outOfStock = PRODUCTS.filter(p => p.stock_online === 0).length;
+  const lowStock = PRODUCTS.filter(p => p.stock_online === 1).length;
+  const pendingOrders = ORDERS.filter(o => o.status === 'pagado' || o.status === 'revisar_sin_stock').length;
+  const today = new Date(new Date().toDateString());
+  const dueTodayLayaways = LAYAWAYS.filter(l =>
+    (l.status === 'activo' || l.status === 'revisar_sin_stock') && layawayDueDate(l).getTime() === today.getTime()
+  ).length;
+  const attentionTotal = outOfStock + lowStock + dueTodayLayaways + pendingOrders;
+  const invValue = PRODUCTS.reduce((s, p) => s + p.price * (p.stock_online + p.stock_fisica), 0);
+
+  const statsEl = document.getElementById('dash-stats');
+  if (isAdmin) {
+    const todayStr = new Date().toDateString();
+    const weekStart = startOfWeek(new Date());
+    const soldToday = SALES_REPORT_SALES
+      .filter(s => new Date(s.created_at).toDateString() === todayStr)
+      .reduce((s, r) => s + Number(r.total), 0);
+    const soldWeek = SALES_REPORT_SALES
+      .filter(s => new Date(s.created_at) >= weekStart)
+      .reduce((s, r) => s + Number(r.total), 0);
+    statsEl.innerHTML = `
+      <div class="stat-tile"><strong>${fmt.format(soldToday)}</strong><span>Vendido hoy</span></div>
+      <div class="stat-tile"><strong>${fmt.format(soldWeek)}</strong><span>Vendido esta semana</span></div>
+      <div class="stat-tile"><strong>${fmt.format(invValue)}</strong><span>Valor de inventario</span></div>
+      <div class="stat-tile ${attentionTotal > 0 ? 'warn' : ''}"><strong>${attentionTotal}</strong><span>Necesitan atención</span></div>`;
+  } else {
+    statsEl.innerHTML = `
+      <div class="stat-tile"><strong>${PRODUCTS.length}</strong><span>Productos</span></div>
+      <div class="stat-tile"><strong>${fmt.format(invValue)}</strong><span>Valor de inventario</span></div>
+      <div class="stat-tile ${attentionTotal > 0 ? 'warn' : ''}"><strong>${attentionTotal}</strong><span>Necesitan atención</span></div>`;
+  }
+
+  document.getElementById('dash-chart-card').hidden = !isAdmin;
+  if (isAdmin) {
+    const weekStart = startOfWeek(new Date());
+    const dayTotals = [0, 0, 0, 0, 0, 0, 0];
+    SALES_REPORT_SALES.forEach(s => {
+      const d = new Date(new Date(s.created_at).toDateString());
+      const diffDays = Math.round((d - weekStart) / 86400000);
+      if (diffDays >= 0 && diffDays < 7) dayTotals[diffDays] += Number(s.total);
+    });
+    const max = Math.max(1, ...dayTotals);
+    document.getElementById('dash-bars').innerHTML = dayTotals
+      .map(v => `<div class="dash-bar" style="height:${Math.round((v / max) * 100)}%" title="${fmt.format(v)}"></div>`)
+      .join('');
+  }
+
+  const rows = [];
+  if (outOfStock > 0) rows.push({ label: `${outOfStock} producto${outOfStock === 1 ? '' : 's'} agotado${outOfStock === 1 ? '' : 's'} (online)`, tab: 'inventory' });
+  if (lowStock > 0) rows.push({ label: `${lowStock} con 1 pieza (online)`, tab: 'inventory' });
+  if (dueTodayLayaways > 0) rows.push({ label: `${dueTodayLayaways} apartado${dueTodayLayaways === 1 ? '' : 's'} vence${dueTodayLayaways === 1 ? '' : 'n'} hoy`, tab: 'layaways' });
+  if (pendingOrders > 0) rows.push({ label: `${pendingOrders} pedido${pendingOrders === 1 ? '' : 's'} por revisar`, tab: 'orders' });
+
+  const attEl = document.getElementById('dash-attention');
+  attEl.innerHTML = rows.length === 0
+    ? `<li class="dash-attention-empty">Todo al día 🎉</li>`
+    : rows.map(r => `<li><button type="button" class="dash-attention-link" data-tab="${r.tab}">${r.label} ›</button></li>`).join('');
+  attEl.querySelectorAll('.dash-attention-link').forEach(btn => {
+    btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
+  });
 }
 
 // ---------- Inventory tab ----------
@@ -404,7 +466,7 @@ async function saveField(row, field, rawValue) {
   pill.classList.add('show');
   clearTimeout(pill._t);
   pill._t = setTimeout(() => pill.classList.remove('show'), 1200);
-  renderStats();
+  renderDashboard();
 }
 
 async function deleteProduct(id) {
@@ -414,7 +476,7 @@ async function deleteProduct(id) {
   const { error } = await supabase.from('products').delete().eq('id', id);
   if (error) { showToast('No se pudo eliminar', true); console.error(error); return; }
   PRODUCTS = PRODUCTS.filter(x => x.id !== id);
-  renderStats();
+  renderDashboard();
   renderTable();
   showToast(`"${p.name}" eliminado`);
 }
@@ -438,7 +500,7 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
     .single();
   if (error) { showToast('No se pudo agregar el producto', true); console.error(error); return; }
   PRODUCTS.push({ ...data, cost_price });
-  renderStats();
+  renderDashboard();
   renderTable();
   refreshTransferProductOptions();
   showToast(`"${name}" agregado`);
@@ -535,7 +597,7 @@ document.getElementById('sell-confirm-btn').addEventListener('click', async (e) 
     renderTable();
     refreshSellProductOptions();
     refreshTransferProductOptions();
-    renderStats();
+    renderDashboard();
   } finally {
     btn.disabled = false;
   }
@@ -580,7 +642,7 @@ function renderRecentSales() {
       await reloadProducts();
       renderTable();
       refreshSellProductOptions();
-      renderStats();
+      renderDashboard();
     });
   });
 }
@@ -648,7 +710,7 @@ function renderOrders() {
       renderOrders();
       await reloadProducts();
       renderTable();
-      renderStats();
+      renderDashboard();
     });
   });
 
@@ -679,7 +741,7 @@ function renderOrders() {
       renderOrders();
       await reloadProducts();
       renderTable();
-      renderStats();
+      renderDashboard();
     });
   });
 }
@@ -771,7 +833,7 @@ document.getElementById('layaway-confirm-btn').addEventListener('click', async (
     refreshSellProductOptions();
     refreshTransferProductOptions();
     refreshLayawayProductOptions();
-    renderStats();
+    renderDashboard();
     await loadLayaways();
     renderLayaways();
   } finally {
@@ -887,7 +949,7 @@ function renderLayaways() {
         refreshSellProductOptions();
         refreshTransferProductOptions();
         refreshLayawayProductOptions();
-        renderStats();
+        renderDashboard();
         await loadLayaways();
         renderLayaways();
       } finally {
@@ -1129,7 +1191,7 @@ document.getElementById('count-apply-btn').addEventListener('click', async (e) =
     refreshSellProductOptions();
     refreshTransferProductOptions();
     refreshLayawayProductOptions();
-    renderStats();
+    renderDashboard();
   } finally {
     btn.disabled = false;
   }
@@ -1950,7 +2012,6 @@ async function loadEverything() {
     refreshSellProductOptions();
     refreshLayawayProductOptions();
 
-    renderStats();
     renderTable();
     renderTransfers();
     renderPromotions();
@@ -1964,6 +2025,7 @@ async function loadEverything() {
     renderOrders();
     renderLayaways();
     renderRecentSales();
+    renderDashboard();
   } catch (err) {
     showToast('No se pudo cargar el panel', true);
     console.error(err);

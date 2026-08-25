@@ -136,11 +136,16 @@
 
   <!-- ---------- Dashboard ---------- -->
   <section class="tab-panel" id="tab-dashboard">
-    <div class="stat-row">
-      <div class="stat-tile"><strong id="stat-total">—</strong><span>Productos</span></div>
-      <div class="stat-tile"><strong id="stat-value">—</strong><span>Valor de inventario (venta)</span></div>
-      <div class="stat-tile warn"><strong id="stat-low">—</strong><span>Con 1 pieza (online)</span></div>
-      <div class="stat-tile"><strong id="stat-oos">—</strong><span>Agotados (online)</span></div>
+    <div class="stat-row" id="dash-stats"></div>
+    <div class="dash-grid">
+      <div class="dash-card" id="dash-chart-card" hidden>
+        <h3>Ventas de la semana</h3>
+        <div class="dash-bars" id="dash-bars"></div>
+      </div>
+      <div class="dash-card">
+        <h3>Atención hoy</h3>
+        <ul class="dash-attention" id="dash-attention"></ul>
+      </div>
     </div>
   </section>
 
