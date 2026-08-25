@@ -264,10 +264,11 @@ footer { border-top: 3px solid var(--ink); padding: 34px 24px 40px; background: 
 
 /* ---------- Admin ---------- */
 .admin-shell { max-width: 1180px; margin: 0 auto; padding: 24px 24px 100px; display: flex; gap: 28px; align-items: flex-start; }
+.admin-shell[hidden] { display: none; }
 .admin-content { flex: 1; min-width: 0; }
 .tab-panel[hidden] { display: none; }
 
-.admin-sidebar { flex: none; width: 220px; position: sticky; top: 90px; display: flex; flex-direction: column; gap: 2px; }
+.admin-sidebar { flex: none; width: 220px; position: sticky; top: 90px; display: flex; flex-direction: column; gap: 2px; max-height: calc(100vh - 106px); overflow-y: auto; }
 .sidebar-brand { font-family: 'Baloo 2'; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; padding: 4px 10px 14px; }
 .sidebar-mark { font-size: 1.3rem; }
 .nav-group-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); margin: 14px 0 4px; padding: 0 10px; }
@@ -312,8 +313,11 @@ footer { border-top: 3px solid var(--ink); padding: 34px 24px 40px; background: 
 @media (max-width: 780px) { .dash-grid { grid-template-columns: 1fr; } }
 .dash-card { background: var(--panel); border: 2px solid var(--line); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow); }
 .dash-card h3 { font-size: 1rem; margin-bottom: 12px; }
-.dash-bars { display: flex; align-items: flex-end; gap: 8px; height: 130px; }
-.dash-bar { flex: 1; background: var(--accent-3); border-radius: 6px 6px 0 0; min-height: 3px; transition: height 0.25s var(--ease-out); }
+.dash-bars { display: flex; align-items: flex-end; gap: 8px; height: 150px; }
+.dash-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; }
+.dash-bar { width: 100%; background: var(--accent-3); border-radius: 6px 6px 0 0; min-height: 3px; transition: height 0.25s var(--ease-out); }
+.dash-bar.today { background: var(--accent); }
+.dash-bar-label { font-size: 0.68rem; color: var(--ink-soft); text-align: center; }
 .dash-attention { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .dash-attention-link { display: block; width: 100%; text-align: left; padding: 9px 4px; border: none; background: none; border-top: 1px solid var(--line); font-family: 'Karla'; font-size: 0.9rem; color: var(--ink); cursor: pointer; }
 .dash-attention li:first-child .dash-attention-link { border-top: none; }

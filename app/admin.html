@@ -136,7 +136,11 @@
 
   <!-- ---------- Dashboard ---------- -->
   <section class="tab-panel" id="tab-dashboard">
-    <div class="stat-row" id="dash-stats"></div>
+    <div class="stat-row" id="dash-stats">
+      <div class="stat-tile"><strong>—</strong><span>Productos</span></div>
+      <div class="stat-tile"><strong>—</strong><span>Valor de inventario</span></div>
+      <div class="stat-tile"><strong>—</strong><span>Necesitan atención</span></div>
+    </div>
     <div class="dash-grid">
       <div class="dash-card" id="dash-chart-card" hidden>
         <h3>Ventas de la semana</h3>
@@ -144,7 +148,9 @@
       </div>
       <div class="dash-card">
         <h3>Atención hoy</h3>
-        <ul class="dash-attention" id="dash-attention"></ul>
+        <ul class="dash-attention" id="dash-attention">
+          <li class="dash-attention-empty">Cargando…</li>
+        </ul>
       </div>
     </div>
   </section>

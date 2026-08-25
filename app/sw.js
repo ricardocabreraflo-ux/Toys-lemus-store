@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemus-shell-v2';
+const CACHE_NAME = 'lemus-shell-v3';
 
 const SHELL_URLS = [
   '/index.html',

@@ -122,6 +122,15 @@ function applyRoleVisibility() {
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.hidden = !btn.hasAttribute(`data-role-${CURRENT_ROLE}`);
   });
+  document.querySelectorAll('.nav-group-label').forEach(label => {
+    let el = label.nextElementSibling;
+    let anyVisible = false;
+    while (el && !el.classList.contains('nav-group-label')) {
+      if (el.classList.contains('tab-btn') && !el.hidden) { anyVisible = true; break; }
+      el = el.nextElementSibling;
+    }
+    label.hidden = !anyVisible;
+  });
   const activeBtn = document.querySelector('.tab-btn[aria-selected="true"]');
   const activeKey = activeBtn ? activeBtn.dataset.tab : null;
   const activeStillVisible = activeKey && document.querySelector(`.tab-btn[data-tab="${activeKey}"]:not([hidden])`);
@@ -278,8 +287,15 @@ function renderDashboard() {
       if (diffDays >= 0 && diffDays < 7) dayTotals[diffDays] += Number(s.total);
     });
     const max = Math.max(1, ...dayTotals);
+    const dayLetters = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+    const todayIdx = Math.round((today - weekStart) / 86400000);
+    const maxBarPx = 118;
     document.getElementById('dash-bars').innerHTML = dayTotals
-      .map(v => `<div class="dash-bar" style="height:${Math.round((v / max) * 100)}%" title="${fmt.format(v)}"></div>`)
+      .map((v, i) => `
+        <div class="dash-bar-col">
+          <div class="dash-bar${i === todayIdx ? ' today' : ''}" style="height:${Math.round((v / max) * maxBarPx)}px" title="${fmt.format(v)}"></div>
+          <span class="dash-bar-label">${dayLetters[i]}</span>
+        </div>`)
       .join('');
   }
 
