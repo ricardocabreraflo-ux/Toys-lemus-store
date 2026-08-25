@@ -65,10 +65,13 @@ Para **admin**:
 - Una gráfica de barras "Ventas de la semana" (lunes a domingo),
   calculada agrupando `SALES_REPORT_SALES` por día — el mismo dato que
   ya arma Reportes, solo agrupado por día en vez de por mes.
-- Una tarjeta "Atención hoy" con hasta tres renglones, cada uno con un
-  enlace directo a su pestaña: productos con 1 pieza (online), apartados
-  que vencen hoy, pedidos pendientes por revisar. Un renglón que esté
-  en cero no se muestra.
+- Una tarjeta "Atención hoy" con hasta cuatro renglones, cada uno con
+  un enlace directo a su pestaña: productos agotados (online),
+  productos con 1 pieza (online), apartados que vencen hoy, pedidos
+  pendientes por revisar. Un renglón que esté en cero no se muestra.
+  (Los dos primeros son los mismos "Agotados"/"Con 1 pieza" que hoy
+  viven como tarjetas propias arriba de todo — se mudan aquí en vez de
+  desaparecer.)
 
 Para **vendedor**: la vendedor no ve ventas totales ni finanzas hoy
 (Reportes y Finanzas son solo-admin), así que su Dashboard es más
@@ -118,7 +121,7 @@ hoja "Más").
   cargan.
 - Si no hay ventas registradas esta semana, la gráfica se muestra con
   todas las barras en cero — no es un error, es el estado normal.
-- Si "Atención hoy" no tiene nada que mostrar (cero en las tres
+- Si "Atención hoy" no tiene nada que mostrar (cero en las cuatro
   señales), la tarjeta muestra un mensaje breve ("Todo al día") en vez
   de quedar vacía sin explicación.
 
