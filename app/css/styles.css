@@ -282,10 +282,11 @@ footer { border-top: 3px solid var(--ink); padding: 34px 24px 40px; background: 
 .tab-btn.nav-item:hover { color: var(--ink); background: var(--bg-alt); }
 .tab-btn.nav-item[aria-selected="true"] { color: var(--accent-ink); background: var(--accent); }
 
-.tab-btn.nav-bn-item { flex-direction: column; gap: 3px; padding: 6px 4px; font-size: 0.62rem; border-radius: 10px; }
+.tab-btn.nav-bn-item { flex: 1; justify-content: center; flex-direction: column; gap: 4px; padding: 9px 4px; font-size: 0.72rem; border-radius: 10px; min-height: 52px; }
+.tab-btn.nav-bn-item .icon { width: 21px; height: 21px; }
 .tab-btn.nav-bn-item[aria-selected="true"] { color: var(--accent); }
-#more-nav-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px; border: none; background: none; cursor: pointer; font-family: 'Karla'; font-weight: 700; font-size: 0.62rem; color: var(--ink-soft); border-radius: 10px; }
-#more-nav-btn .icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#more-nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 9px 4px; border: none; background: none; cursor: pointer; font-family: 'Karla'; font-weight: 700; font-size: 0.72rem; color: var(--ink-soft); border-radius: 10px; min-height: 52px; }
+#more-nav-btn .icon { width: 21px; height: 21px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 #more-nav-btn[aria-expanded="true"] { color: var(--accent); }
 
 .admin-bottomnav { display: none; }
@@ -301,12 +302,12 @@ footer { border-top: 3px solid var(--ink); padding: 34px 24px 40px; background: 
 .more-sheet-head { display: flex; align-items: center; justify-content: space-between; font-family: 'Baloo 2'; font-size: 1.05rem; padding: 4px 6px 10px; }
 
 @media (max-width: 640px) {
-  .admin-shell { flex-direction: column; padding: 16px 16px 84px; gap: 0; }
+  .admin-shell { flex-direction: column; padding: 16px 16px 104px; gap: 0; }
   .admin-sidebar { display: none; }
   .admin-bottomnav {
-    display: flex; justify-content: space-around; align-items: center;
+    display: flex; justify-content: space-around; align-items: stretch;
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
-    background: var(--panel); border-top: 2px solid var(--line); padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+    background: var(--panel); border-top: 2px solid var(--line); padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
   }
 }
 .dash-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; }
