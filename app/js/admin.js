@@ -27,6 +27,8 @@ const loginView = document.getElementById('login-view');
 const setPasswordView = document.getElementById('set-password-view');
 const adminView = document.getElementById('admin-view');
 const logoutBtn = document.getElementById('logout-btn');
+const changePasswordBtn = document.getElementById('change-password-btn');
+const changePasswordView = document.getElementById('change-password-view');
 
 // Invite/recovery links land here with the session token in the URL hash
 // (e.g. #access_token=...&type=invite). supabase-js's client establishes
@@ -150,6 +152,7 @@ async function refreshAuthUI() {
     adminView.hidden = true;
     setPasswordView.hidden = false;
     logoutBtn.hidden = true;
+    changePasswordBtn.hidden = true;
     return;
   }
   setPasswordView.hidden = true;
@@ -167,6 +170,7 @@ async function refreshAuthUI() {
       loginView.hidden = false;
       adminView.hidden = true;
       logoutBtn.hidden = true;
+      changePasswordBtn.hidden = true;
       stopCountCamera();
       return;
     }
@@ -174,6 +178,7 @@ async function refreshAuthUI() {
     loginView.hidden = true;
     adminView.hidden = false;
     logoutBtn.hidden = false;
+    changePasswordBtn.hidden = false;
     applyRoleVisibility();
     await loadEverything();
     subscribeRealtime();
@@ -182,6 +187,8 @@ async function refreshAuthUI() {
     loginView.hidden = false;
     adminView.hidden = true;
     logoutBtn.hidden = true;
+    changePasswordBtn.hidden = true;
+    changePasswordView.hidden = true;
     stopCountCamera();
   }
 }
@@ -220,6 +227,36 @@ logoutBtn.addEventListener('click', async () => {
   stopCountCamera();
   await supabase.auth.signOut();
   refreshAuthUI();
+});
+
+changePasswordBtn.addEventListener('click', () => {
+  document.getElementById('change-password-new').value = '';
+  document.getElementById('change-password-confirm').value = '';
+  document.getElementById('change-password-error').textContent = '';
+  changePasswordView.hidden = false;
+});
+
+document.getElementById('change-password-cancel').addEventListener('click', () => {
+  changePasswordView.hidden = true;
+});
+
+document.getElementById('change-password-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const password = document.getElementById('change-password-new').value;
+  const confirmPassword = document.getElementById('change-password-confirm').value;
+  const errEl = document.getElementById('change-password-error');
+  errEl.textContent = '';
+
+  if (password !== confirmPassword) {
+    errEl.textContent = 'Las contraseñas no coinciden.';
+    return;
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) { errEl.textContent = error.message; return; }
+
+  changePasswordView.hidden = true;
+  showToast('Contraseña actualizada');
 });
 
 // ---------- Shared select builders ----------

@@ -354,6 +354,7 @@ select.cell-input { appearance: none; cursor: pointer; }
 
 .login-wrap { min-height: calc(100vh - 74px); display: grid; place-items: center; padding: 40px 20px; }
 .login-wrap[hidden] { display: none; }
+#change-password-view { position: fixed; inset: 0; z-index: 200; background: var(--bg); min-height: 100vh; }
 .login-card { width: 100%; max-width: 380px; background: var(--panel); border: 2px solid var(--line); border-radius: 20px; padding: 32px 28px; box-shadow: var(--shadow-lg); display: flex; flex-direction: column; gap: 16px; }
 .login-card h1 { font-size: 1.5rem; }
 .login-card p { color: var(--ink-soft); font-size: 0.92rem; margin: 0; }
