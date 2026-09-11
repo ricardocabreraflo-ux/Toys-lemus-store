@@ -1025,7 +1025,10 @@ async function loadAndRenderSellHistory() {
   const toEl = document.getElementById('sell-history-to');
   const errEl = document.getElementById('sell-history-error');
   errEl.textContent = '';
-  if (fromEl.value && toEl.value && fromEl.value > toEl.value) {
+  if (!fromEl.value || !toEl.value) {
+    return;
+  }
+  if (fromEl.value > toEl.value) {
     errEl.textContent = 'La fecha "Desde" no puede ser posterior a "Hasta".';
     return;
   }
