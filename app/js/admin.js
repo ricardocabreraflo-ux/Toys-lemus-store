@@ -587,6 +587,29 @@ function addToSellCart(productId) {
   renderSellCart();
 }
 
+document.getElementById('sell-free-toggle-btn').addEventListener('click', () => {
+  const form = document.getElementById('sell-free-form');
+  form.hidden = !form.hidden;
+  document.getElementById('sell-free-error').textContent = '';
+  if (!form.hidden) document.getElementById('sell-free-desc').focus();
+});
+
+document.getElementById('sell-free-add-btn').addEventListener('click', () => {
+  const descEl = document.getElementById('sell-free-desc');
+  const amountEl = document.getElementById('sell-free-amount');
+  const errEl = document.getElementById('sell-free-error');
+  const description = descEl.value.trim();
+  const amount = Number(amountEl.value);
+  errEl.textContent = '';
+  if (!description) { errEl.textContent = 'Escribe una descripción.'; return; }
+  if (!(amount > 0)) { errEl.textContent = 'El monto debe ser mayor a cero.'; return; }
+  SELL_CART.push({ kind: 'free', description, amount });
+  descEl.value = '';
+  amountEl.value = '';
+  document.getElementById('sell-free-form').hidden = true;
+  renderSellCart();
+});
+
 function renderSellCart() {
   const tbody = document.getElementById('sell-cart-tbody');
   if (SELL_CART.length === 0) {
