@@ -976,7 +976,11 @@ document.getElementById('sell-sale-back-btn').addEventListener('click', () => re
 document.getElementById('sell-goto-history-btn').addEventListener('click', () => setSellView('history'));
 document.getElementById('sell-goto-layaways-btn').addEventListener('click', () => setActiveTab('layaways'));
 document.getElementById('sell-confirm-new-btn').addEventListener('click', () => resetSellView());
-document.getElementById('sell-confirm-history-btn').addEventListener('click', () => setSellView('history'));
+document.getElementById('sell-confirm-history-btn').addEventListener('click', () => {
+  document.getElementById('sell-history-from').value = todayDateStr();
+  document.getElementById('sell-history-to').value = todayDateStr();
+  setSellView('history');
+});
 document.getElementById('sell-history-back-btn').addEventListener('click', () => setSellView('home'));
 
 function todayDateStr() {
