@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lemus Store — Panel de administrador</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="css/styles.css">
+<link rel="manifest" href="manifest-admin.json">
+<meta name="theme-color" content="#FF5A36">
+<link rel="apple-touch-icon" href="icons/admin/apple-touch-icon.png">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11L12 4l8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1v-8Z"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M3 8l9-4 9 4-9 4-9-4Z"/><path d="M3 8v9l9 4 9-4V8"/><path d="M12 12v9"/></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><path d="M3 4h2l2.4 12.2a2 2 0 0 0 2 1.6h7.4a2 2 0 0 0 2-1.6L21 8H6"/><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></symbol>
+    <symbol id="i-pkg" viewBox="0 0 24 24"><rect x="3" y="7" width="14" height="11" rx="1.4"/><path d="M17 10h2.3L21 13v5h-4"/><circle cx="7" cy="19.5" r="1.2"/><circle cx="18" cy="19.5" r="1.2"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></symbol>
+    <symbol id="i-barcode" viewBox="0 0 24 24"><path d="M4 5v14M8 5v14M11 5v14M15 5v14M17.5 5v14M21 5v14" stroke-width="1.6"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M11 3h6a2 2 0 0 1 2 2v6l-9.5 9.5a1.5 1.5 0 0 1-2 0L3 16a1.5 1.5 0 0 1 0-2L11 3Z"/><circle cx="15.5" cy="7.5" r="1.1"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.2"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.2"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.2"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.2"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M12 20V4M20 20v-7" stroke-width="2.1"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="17" cy="14" r="1"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.5" cy="9.5" r="2.3"/><path d="M15.7 14.1c2.4.3 4.3 2.4 4.3 5"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M21 12h-2.2M5.2 12H3M18.4 5.6l-1.5 1.5M7.1 16.9l-1.5 1.5M18.4 18.4l-1.5-1.5M7.1 7.1 5.6 5.6"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  </defs>
+</svg>
+
+<header class="site">
+  <div class="site-bar">
+    <a class="logo" href="index.html">
+      <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z"/></svg></span>
+      <span>Lemus <span style="color:var(--accent)">Store</span></span>
+    </a>
+    <span class="nav-link" style="border:none;background:var(--bg-alt);">Panel de administrador</span>
+    <div class="head-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="Cambiar tema" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/></svg>
+      </button>
+      <button class="nav-link" id="change-password-btn" type="button" hidden>Cambiar contraseña</button>
+      <button class="nav-link" id="logout-btn" type="button" hidden>Cerrar sesión</button>
+    </div>
+  </div>
+</header>
+
+<div class="login-wrap" id="change-password-view" hidden>
+  <form class="login-card" id="change-password-form">
+    <div>
+      <h1>Cambiar contraseña</h1>
+      <p>Escribe tu nueva contraseña dos veces para confirmarla.</p>
+    </div>
+    <div class="field">
+      <label for="change-password-new">Nueva contraseña</label>
+      <input id="change-password-new" type="password" required minlength="6" autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label for="change-password-confirm">Confirma la contraseña</label>
+      <input id="change-password-confirm" type="password" required minlength="6" autocomplete="new-password">
+    </div>
+    <p class="form-error" id="change-password-error"></p>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-primary" type="submit" style="flex:1; justify-content:center;">Guardar</button>
+      <button class="btn" type="button" id="change-password-cancel" style="flex:1; justify-content:center;">Cancelar</button>
+    </div>
+  </form>
+</div>
+
+<div class="login-wrap" id="login-view">
+  <form class="login-card" id="login-form">
+    <div>
+      <h1>Panel de administrador</h1>
+      <p>Inicia sesión para editar el inventario de Lemus Store.</p>
+    </div>
+    <div class="field">
+      <label for="login-email">Correo</label>
+      <input id="login-email" type="email" required autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="login-password">Contraseña</label>
+      <input id="login-password" type="password" required autocomplete="current-password">
+    </div>
+    <p class="form-error" id="login-error"></p>
+    <button class="btn btn-primary" type="submit" id="login-submit" style="justify-content:center;">Entrar</button>
+  </form>
+</div>
+
+<div class="login-wrap" id="set-password-view" hidden>
+  <form class="login-card" id="set-password-form">
+    <div>
+      <h1>Bienvenido a Lemus Store</h1>
+      <p>Antes de entrar, elige tu contraseña.</p>
+    </div>
+    <div class="field">
+      <label for="new-password">Contraseña</label>
+      <input id="new-password" type="password" required minlength="6" autocomplete="new-password">
+    </div>
+    <p class="form-error" id="set-password-error"></p>
+    <button class="btn btn-primary" type="submit" style="justify-content:center;">Guardar y entrar</button>
+  </form>
+</div>
+
+<main class="admin-shell" id="admin-view" hidden>
+  <nav class="admin-sidebar" id="admin-sidebar" aria-label="Secciones">
+    <div class="sidebar-brand"><span class="sidebar-mark">🧸</span> Lemus Store</div>
+    <button class="tab-btn nav-item" data-tab="dashboard" type="button" aria-selected="true" data-role-admin data-role-vendedor><svg class="icon"><use href="#i-home"/></svg>Dashboard</button>
+    <p class="nav-group-label">Operación diaria</p>
+    <button class="tab-btn nav-item" data-tab="sell" type="button" aria-selected="false" data-role-admin data-role-vendedor><svg class="icon"><use href="#i-cart"/></svg>Vender</button>
+    <button class="tab-btn nav-item" data-tab="orders" type="button" aria-selected="false" data-role-admin data-role-vendedor><svg class="icon"><use href="#i-pkg"/></svg>Pedidos</button>
+    <button class="tab-btn nav-item" data-tab="layaways" type="button" aria-selected="false" data-role-admin data-role-vendedor><svg class="icon"><use href="#i-clock"/></svg>Apartados</button>
+    <button class="tab-btn nav-item" data-tab="count" type="button" aria-selected="false" data-role-admin data-role-vendedor><svg class="icon"><use href="#i-barcode"/></svg>Conteo</button>
+    <p class="nav-group-label">Catálogo y precios</p>
+    <button class="tab-btn nav-item" data-tab="inventory" type="button" aria-selected="false" data-role-admin data-role-vendedor><svg class="icon"><use href="#i-box"/></svg>Inventario</button>
+    <button class="tab-btn nav-item" data-tab="transfers" type="button" aria-selected="false" data-role-admin><svg class="icon"><use href="#i-swap"/></svg>Traspasos</button>
+    <button class="tab-btn nav-item" data-tab="promotions" type="button" aria-selected="false" data-role-admin><svg class="icon"><use href="#i-tag"/></svg>Promociones</button>
+    <button class="tab-btn nav-item" data-tab="taxonomy" type="button" aria-selected="false" data-role-admin><svg class="icon"><use href="#i-grid"/></svg>Líneas y categorías</button>
+    <p class="nav-group-label">Negocio</p>
+    <button class="tab-btn nav-item" data-tab="reports" type="button" aria-selected="false" data-role-admin><svg class="icon"><use href="#i-chart"/></svg>Reportes</button>
+    <button class="tab-btn nav-item" data-tab="finance" type="button" aria-selected="false" data-role-admin><svg class="icon"><use href="#i-wallet"/></svg>Finanzas</button>
+    <button class="tab-btn nav-item" data-tab="users" type="button" aria-selected="false" data-role-admin><svg class="icon"><use href="#i-users"/></svg>Usuarios</button>
+    <button class="tab-btn nav-item" data-tab="settings" type="button" aria-selected="false" data-role-admin><svg class="icon"><use href="#i-gear"/></svg>Ajustes</button>
+  </nav>
+
+  <nav class="admin-bottomnav" id="admin-bottomnav" aria-label="Secciones">
+    <button class="tab-btn nav-bn-item" data-tab="dashboard" type="button" aria-selected="true" data-role-admin data-role-vendedor><svg class="icon"><use href="#i-home"/></svg><span>Hoy</span></button>
+    <button class="tab-btn nav-bn-item" data-tab="count" type="button" aria-selected="false" data-role-admin data-role-vendedor><svg class="icon"><use href="#i-barcode"/></svg><span>Conteo</span></button>
+    <button class="tab-btn nav-bn-item nav-bn-main" data-tab="sell" type="button" aria-selected="false" data-role-admin data-role-vendedor><svg class="icon"><use href="#i-cart"/></svg><span>Vender</span></button>
+    <button class="tab-btn nav-bn-item" data-tab="inventory" type="button" aria-selected="false" data-role-admin data-role-vendedor><svg class="icon"><use href="#i-box"/></svg><span>Inventario</span></button>
+    <button class="nav-bn-item" id="more-nav-btn" type="button" aria-expanded="false"><svg class="icon"><use href="#i-menu"/></svg><span>Más</span></button>
+  </nav>
+
+  <div class="more-backdrop" id="more-backdrop" hidden></div>
+  <div class="more-sheet" id="more-sheet" hidden role="dialog" aria-label="Más secciones">
+    <div class="more-sheet-head">
+      <span>Más secciones</span>
+      <button class="icon-btn" id="more-sheet-close" type="button" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <p class="nav-group-label">Operación diaria</p>
+    <button class="tab-btn nav-item" data-tab="orders" type="button" aria-selected="false" data-role-admin data-role-vendedor><svg class="icon"><use href="#i-pkg"/></svg>Pedidos</button>
+    <button class="tab-btn nav-item" data-tab="layaways" type="button" aria-selected="false" data-role-admin data-role-vendedor><svg class="icon"><use href="#i-clock"/></svg>Apartados</button>
+    <p class="nav-group-label">Catálogo y precios</p>
+    <button class="tab-btn nav-item" data-tab="transfers" type="button" aria-selected="false" data-role-admin><svg class="icon"><use href="#i-swap"/></svg>Traspasos</button>
+    <button class="tab-btn nav-item" data-tab="promotions" type="button" aria-selected="false" data-role-admin><svg class="icon"><use href="#i-tag"/></svg>Promociones</button>
+    <button class="tab-btn nav-item" data-tab="taxonomy" type="button" aria-selected="false" data-role-admin><svg class="icon"><use href="#i-grid"/></svg>Líneas y categorías</button>
+    <p class="nav-group-label">Negocio</p>
+    <button class="tab-btn nav-item" data-tab="reports" type="button" aria-selected="false" data-role-admin><svg class="icon"><use href="#i-chart"/></svg>Reportes</button>
+    <button class="tab-btn nav-item" data-tab="finance" type="button" aria-selected="false" data-role-admin><svg class="icon"><use href="#i-wallet"/></svg>Finanzas</button>
+    <button class="tab-btn nav-item" data-tab="users" type="button" aria-selected="false" data-role-admin><svg class="icon"><use href="#i-users"/></svg>Usuarios</button>
+    <button class="tab-btn nav-item" data-tab="settings" type="button" aria-selected="false" data-role-admin><svg class="icon"><use href="#i-gear"/></svg>Ajustes</button>
+  </div>
+
+  <div class="admin-content">
+
+  <!-- ---------- Dashboard ---------- -->
+  <section class="tab-panel" id="tab-dashboard">
+    <div class="stat-row" id="dash-stats">
+      <div class="stat-tile"><strong>—</strong><span>Productos</span></div>
+      <div class="stat-tile"><strong>—</strong><span>Valor de inventario</span></div>
+      <div class="stat-tile"><strong>—</strong><span>Necesitan atención</span></div>
+    </div>
+    <div class="dash-grid">
+      <div class="dash-card" id="dash-chart-card" hidden>
+        <h3>Ventas de la semana</h3>
+        <div class="dash-bars" id="dash-bars"></div>
+      </div>
+      <div class="dash-card">
+        <h3>Atención hoy</h3>
+        <ul class="dash-attention" id="dash-attention">
+          <li class="dash-attention-empty">Cargando…</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- Inventario ---------- -->
+  <section class="tab-panel" id="tab-inventory" hidden>
+    <div class="grid-head" id="add-product-heading">
+      <h2>Agregar producto</h2>
+    </div>
+    <form class="add-form" id="add-form">
+      <div class="field">
+        <label for="new-line">Línea</label>
+        <select class="cell-input" id="new-line" required></select>
+      </div>
+      <div class="field">
+        <label for="new-category">Categoría</label>
+        <select class="cell-input" id="new-category" required></select>
+      </div>
+      <div class="field">
+        <label for="new-subcategory">Subcategoría</label>
+        <select class="cell-input" id="new-subcategory"></select>
+      </div>
+      <div class="field">
+        <label for="new-code">Clave</label>
+        <input class="cell-input" id="new-code" type="text" placeholder="Opcional">
+      </div>
+      <div class="field">
+        <label for="new-barcode">Código de barras</label>
+        <input class="cell-input" id="new-barcode" type="text" placeholder="Opcional, para escanear">
+      </div>
+      <div class="field" style="grid-column: span 2;">
+        <label for="new-name">Nombre</label>
+        <input class="cell-input" id="new-name" type="text" required>
+      </div>
+      <div class="field">
+        <label for="new-cost">Costo (MXN)</label>
+        <input class="cell-input" id="new-cost" type="number" min="0" step="0.01" required>
+      </div>
+      <div class="field">
+        <label for="new-price">Precio venta (MXN)</label>
+        <input class="cell-input" id="new-price" type="number" min="0" step="0.01" required>
+      </div>
+      <div class="field">
+        <label for="new-suggested-price">Precio sugerido (opcional)</label>
+        <input class="cell-input" id="new-suggested-price" type="number" min="0" step="0.01" placeholder="Solo referencia interna">
+      </div>
+      <div class="field">
+        <label for="new-stock-online">Stock online</label>
+        <input class="cell-input" id="new-stock-online" type="number" min="0" step="1" value="0" required>
+      </div>
+      <div class="field">
+        <label for="new-stock-fisica">Stock física</label>
+        <input class="cell-input" id="new-stock-fisica" type="number" min="0" step="1" value="0" required>
+      </div>
+      <div class="field" style="justify-content:flex-end;">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;">
+          <input type="checkbox" id="new-published" checked style="width:auto;"> Publicado online
+        </label>
+      </div>
+      <div class="submit-cell">
+        <button class="btn btn-primary btn-sm" type="submit">Agregar</button>
+      </div>
+    </form>
+
+    <div class="toolbar">
+      <label class="searchbox">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="admin-search" type="text" placeholder="Buscar por nombre o código…" autocomplete="off">
+      </label>
+      <select class="cell-input" id="admin-line-filter" style="max-width:200px;border-color:var(--line);background:var(--panel);">
+        <option value="all">Todas las líneas</option>
+      </select>
+      <select class="cell-input" id="admin-cat-filter" style="max-width:200px;border-color:var(--line);background:var(--panel);">
+        <option value="all">Todas las categorías</option>
+      </select>
+      <select class="cell-input" id="admin-subcat-filter" style="max-width:200px;border-color:var(--line);background:var(--panel);">
+        <option value="all">Todas las subcategorías</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;color:var(--ink-soft);">
+        <input type="checkbox" id="admin-published-filter" style="width:auto;"> Solo publicados
+      </label>
+      <button class="btn btn-sm" type="button" id="export-pdf-btn">Exportar a PDF</button>
+      <span class="count" id="admin-count" style="margin-left:auto;"></span>
+    </div>
+
+    <div class="toolbar" id="export-pdf-panel" hidden>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
+        <input type="checkbox" class="export-col" data-col="line_cat" checked style="width:auto;"> Línea / Categoría
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
+        <input type="checkbox" class="export-col" data-col="code" checked style="width:auto;"> Código
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
+        <input type="checkbox" class="export-col" data-col="price" checked style="width:auto;"> Precio
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
+        <input type="checkbox" class="export-col" data-col="stock_online" checked style="width:auto;"> Stock online
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
+        <input type="checkbox" class="export-col" data-col="stock_fisica" checked style="width:auto;"> Stock física
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
+        <input type="checkbox" class="export-col" data-col="published" checked style="width:auto;"> Publicado
+      </label>
+      <button class="btn btn-primary btn-sm" type="button" id="export-pdf-generate">Generar PDF</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Línea / Categoría / Subcategoría</th>
+            <th>Clave / Código de barras</th>
+            <th>Nombre</th>
+            <th id="col-cost-header">Costo</th>
+            <th>Precio</th>
+            <th>Stock online</th>
+            <th>Stock física</th>
+            <th>Publicado</th>
+            <th></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="admin-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- Vender (POS física) ---------- -->
+  <section class="tab-panel" id="tab-sell" hidden>
+
+    <div id="sell-home">
+      <div class="sell-hero">
+        <div class="sell-hero-label">Tu tienda hoy</div>
+        <div class="sell-hero-stats" id="sell-today-stats">
+          <div class="sell-hero-stat"><strong>—</strong><span>Vendido hoy</span></div>
+          <div class="sell-hero-stat"><strong>—</strong><span>Ticket promedio</span></div>
+          <div class="sell-hero-stat"><strong>—</strong><span>Piezas vendidas hoy</span></div>
+          <div class="sell-hero-stat"><strong>—</strong><span>Ventas del día</span></div>
+        </div>
+      </div>
+      <button class="btn btn-primary" type="button" id="sell-start-btn" style="margin:0 0 20px;">🛒 Registrar venta</button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" type="button" id="sell-goto-history-btn">🕐 Historial</button>
+        <button class="btn btn-ghost btn-sm" type="button" id="sell-goto-layaways-btn">📅 Apartados</button>
+      </div>
+    </div>
+
+    <div class="more-backdrop" id="sell-options-backdrop" hidden></div>
+    <div class="more-sheet" id="sell-options-sheet" hidden role="dialog" aria-label="Nueva venta">
+      <div class="more-sheet-head">
+        <span>Nueva venta</span>
+        <button class="icon-btn" id="sell-options-close" type="button" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <button class="sell-sheet-option" type="button" id="sell-option-products" style="--c: var(--accent);">
+        <span class="opt-icon">🛒</span>
+        <span class="opt-body"><strong>Venta de productos</strong><span>Busca o escanea del catálogo</span></span>
+        <svg class="opt-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <button class="sell-sheet-option" type="button" id="sell-option-free" style="--c: var(--accent-3);">
+        <span class="opt-icon">💵</span>
+        <span class="opt-body"><strong>Venta libre</strong><span>Un monto, sin producto del catálogo</span></span>
+        <svg class="opt-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <button class="sell-sheet-option" type="button" id="sell-option-layaway" style="--c: var(--accent-5);">
+        <span class="opt-icon">📅</span>
+        <span class="opt-body"><strong>Apartado</strong><span>Anticipo y fecha de entrega</span></span>
+        <svg class="opt-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+
+    <div id="sell-sale" hidden>
+      <div class="grid-head">
+        <h2 id="sell-sale-title">Venta de productos</h2>
+        <button class="btn btn-ghost btn-sm" type="button" id="sell-sale-back-btn">‹ Cancelar</button>
+      </div>
+
+      <div class="autocomplete-wrap" id="sell-search-wrap">
+        <input class="cell-input" id="sell-search" type="text" autocomplete="off" placeholder="Escanea el código o escribe el nombre del producto…">
+        <div class="autocomplete-list" id="sell-suggestions" hidden></div>
+      </div>
+      <button class="btn btn-sm" type="button" id="sell-camera-btn" hidden style="margin-top:8px;">Escanear con cámara</button>
+      <video id="sell-camera-video" autoplay playsinline muted hidden style="width:100%;max-width:360px;margin-top:8px;border-radius:10px;background:#000;"></video>
+
+      <div class="add-form" id="sell-free-form" hidden style="grid-template-columns: 2fr 1fr auto; margin-top:8px;">
+        <div class="field">
+          <label for="sell-free-desc">Descripción</label>
+          <input class="cell-input" id="sell-free-desc" type="text">
+        </div>
+        <div class="field">
+          <label for="sell-free-amount">Monto</label>
+          <input class="cell-input" id="sell-free-amount" type="number" min="0.01" step="0.01">
+        </div>
+        <div class="submit-cell"><button class="btn btn-primary btn-sm" type="button" id="sell-free-add-btn">Agregar</button></div>
+      </div>
+      <p class="form-error" id="sell-free-error"></p>
+
+      <div class="table-wrap" style="margin-top:16px;">
+        <table class="admin-table">
+          <thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th><th></th></tr></thead>
+          <tbody id="sell-cart-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="stat-row" style="margin-top:16px;">
+        <div class="stat-tile"><strong id="sell-total">$0.00</strong><span>Total</span></div>
+      </div>
+      <div class="add-form" style="grid-template-columns: 1fr auto; margin-top:12px;">
+        <div class="field">
+          <label for="sell-cash">Efectivo recibido (opcional, solo para calcular cambio)</label>
+          <input class="cell-input" id="sell-cash" type="number" min="0" step="0.01">
+        </div>
+        <div class="submit-cell" style="align-items:flex-end;">
+          <span id="sell-change" style="color:var(--ink-soft);font-size:0.9rem;"></span>
+        </div>
+      </div>
+      <p class="form-error" id="sell-error"></p>
+      <button class="btn btn-primary" type="button" id="sell-confirm-btn" style="margin-top:12px;">Cobrar</button>
+    </div>
+
+    <div id="sell-sale-confirm" hidden>
+      <div class="grid-head"><h2>Venta registrada</h2></div>
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>Producto</th><th>Cantidad</th><th>Subtotal</th></tr></thead>
+          <tbody id="sell-confirm-tbody"></tbody>
+        </table>
+      </div>
+      <div class="stat-row" style="margin-top:16px;">
+        <div class="stat-tile"><strong id="sell-confirm-total">$0.00</strong><span>Total</span></div>
+      </div>
+      <p id="sell-confirm-change" style="color:var(--ink-soft);"></p>
+      <div style="display:flex; gap:10px; margin-top:12px;">
+        <button class="btn btn-primary" type="button" id="sell-confirm-new-btn">Nueva venta</button>
+        <button class="btn btn-ghost" type="button" id="sell-confirm-history-btn">Ver historial</button>
+      </div>
+    </div>
+
+    <div id="sell-history" hidden>
+      <div class="grid-head">
+        <h2>Historial de ventas</h2>
+        <button class="btn btn-ghost btn-sm" type="button" id="sell-history-back-btn">‹ Volver</button>
+      </div>
+      <div class="add-form" style="grid-template-columns: 1fr 1fr;">
+        <div class="field">
+          <label for="sell-history-from">Desde</label>
+          <input class="cell-input" id="sell-history-from" type="date">
+        </div>
+        <div class="field">
+          <label for="sell-history-to">Hasta</label>
+          <input class="cell-input" id="sell-history-to" type="date">
+        </div>
+      </div>
+      <p class="form-error" id="sell-history-error"></p>
+      <div class="table-wrap" style="margin-top:16px;">
+        <table class="admin-table">
+          <thead><tr><th>Fecha</th><th>Total</th><th id="sell-history-action-header"></th></tr></thead>
+          <tbody id="sell-history-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ---------- Pedidos en línea ---------- -->
+  <section class="tab-panel" id="tab-orders" hidden>
+    <div class="grid-head"><h2>Pendientes</h2></div>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Fecha</th><th>Cliente</th><th>Teléfono</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="orders-pending-tbody"></tbody>
+      </table>
+    </div>
+    <div class="grid-head"><h2>Entregados</h2></div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Fecha</th><th>Cliente</th><th>Teléfono</th><th>Total</th><th>Entregado</th><th id="orders-delivered-action-header"></th></tr></thead>
+        <tbody id="orders-delivered-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- Apartados ---------- -->
+  <section class="tab-panel" id="tab-layaways" hidden>
+    <div class="grid-head"><h2>Nuevo apartado</h2></div>
+    <form class="add-form" id="layaway-add-form" style="grid-template-columns: 2fr 1fr auto;">
+      <div class="field">
+        <label for="layaway-product">Producto</label>
+        <select class="cell-input" id="layaway-product" required></select>
+      </div>
+      <div class="field">
+        <label for="layaway-qty">Cantidad</label>
+        <input class="cell-input" id="layaway-qty" type="number" min="1" step="1" value="1" required>
+      </div>
+      <div class="submit-cell"><button class="btn btn-primary btn-sm" type="submit" id="layaway-add-btn">Agregar</button></div>
+    </form>
+
+    <div class="table-wrap" style="margin-top:16px;">
+      <table class="admin-table">
+        <thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th><th></th></tr></thead>
+        <tbody id="layaway-cart-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="add-form" style="grid-template-columns: 1fr 1fr 1fr; margin-top:12px;">
+      <div class="field"><label for="layaway-name">Nombre del cliente</label><input class="cell-input" id="layaway-name" type="text" required></div>
+      <div class="field"><label for="layaway-phone">Teléfono</label><input class="cell-input" id="layaway-phone" type="tel" required></div>
+      <div class="field"><label for="layaway-email">Correo (opcional)</label><input class="cell-input" id="layaway-email" type="email"></div>
+    </div>
+
+    <div class="stat-row" style="margin-top:16px;">
+      <div class="stat-tile"><strong id="layaway-total">$0.00</strong><span>Total</span></div>
+      <div class="stat-tile"><strong id="layaway-deposit">$0.00</strong><span>Anticipo (50%)</span></div>
+    </div>
+    <p class="form-error" id="layaway-error"></p>
+    <button class="btn btn-primary" type="button" id="layaway-confirm-btn" style="margin-top:12px;">Registrar apartado</button>
+
+    <div class="grid-head" style="margin-top:32px;"><h2>Activos</h2></div>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Fecha límite</th><th>Cliente</th><th>Teléfono</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="layaways-active-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="grid-head"><h2>Historial</h2></div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Fecha límite</th><th>Cliente</th><th>Total</th><th>Estado</th></tr></thead>
+        <tbody id="layaways-history-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- Conteo físico ---------- -->
+  <section class="tab-panel" id="tab-count" hidden>
+    <div class="grid-head"><h2>Conteo físico de inventario</h2></div>
+    <div class="autocomplete-wrap" id="count-search-wrap">
+      <input class="cell-input" id="count-search" type="text" autocomplete="off" placeholder="Escanea el código o escribe el nombre del producto…">
+      <div class="autocomplete-list" id="count-suggestions" hidden></div>
+    </div>
+
+    <button class="btn btn-sm" type="button" id="count-camera-btn" hidden style="margin-top:8px;">Escanear con cámara</button>
+    <video id="count-camera-video" autoplay playsinline muted hidden style="width:100%;max-width:360px;margin-top:8px;border-radius:10px;background:#000;"></video>
+
+    <div class="table-wrap" style="margin-top:16px;">
+      <table class="admin-table">
+        <thead><tr><th>Producto</th><th>Contado</th><th></th></tr></thead>
+        <tbody id="count-items-tbody"></tbody>
+      </table>
+    </div>
+
+    <button class="btn btn-primary" type="button" id="count-finish-btn" style="margin-top:12px;">Finalizar conteo</button>
+
+    <div id="count-diff-wrap" hidden>
+      <div class="grid-head" style="margin-top:32px;"><h2>Resultado del conteo</h2></div>
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>Producto</th><th>Stock actual</th><th>Contado</th><th>Diferencia</th></tr></thead>
+          <tbody id="count-diff-tbody"></tbody>
+        </table>
+      </div>
+      <button class="btn btn-primary" type="button" id="count-apply-btn" style="margin-top:12px;">Aplicar todo</button>
+    </div>
+  </section>
+
+  <!-- ---------- Traspasos ---------- -->
+  <section class="tab-panel" id="tab-transfers" hidden>
+    <div class="grid-head"><h2>Traspasar entre ubicaciones</h2></div>
+    <form class="add-form" id="transfer-form">
+      <div class="field" style="grid-column: span 2;">
+        <label for="tr-product">Producto</label>
+        <select class="cell-input" id="tr-product" required></select>
+      </div>
+      <div class="field">
+        <label for="tr-from">De</label>
+        <select class="cell-input" id="tr-from" required>
+          <option value="online">Online</option>
+          <option value="fisica">Física</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="tr-to">A</label>
+        <select class="cell-input" id="tr-to" required>
+          <option value="fisica">Física</option>
+          <option value="online">Online</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="tr-qty">Cantidad</label>
+        <input class="cell-input" id="tr-qty" type="number" min="1" step="1" required>
+      </div>
+      <div class="field" style="grid-column: span 2;">
+        <label for="tr-note">Nota (opcional)</label>
+        <input class="cell-input" id="tr-note" type="text" placeholder="Ej. reabasto de tienda">
+      </div>
+      <div class="submit-cell">
+        <button class="btn btn-primary btn-sm" type="submit">Traspasar</button>
+      </div>
+    </form>
+    <p class="form-error" id="transfer-error"></p>
+
+    <div class="grid-head"><h2>Historial reciente</h2></div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Fecha</th><th>Producto</th><th>De → A</th><th>Cantidad</th><th>Nota</th></tr></thead>
+        <tbody id="transfers-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- Promociones ---------- -->
+  <section class="tab-panel" id="tab-promotions" hidden>
+    <div class="grid-head"><h2>Nueva promoción</h2></div>
+    <form class="add-form" id="promo-form">
+      <div class="field" style="grid-column: span 2;">
+        <label for="promo-name">Nombre</label>
+        <input class="cell-input" id="promo-name" type="text" required placeholder="Ej. Quincena Shein">
+      </div>
+      <div class="field">
+        <label for="promo-scope-type">Aplica a</label>
+        <select class="cell-input" id="promo-scope-type">
+          <option value="line">Una línea completa</option>
+          <option value="category">Una categoría</option>
+          <option value="product">Un producto específico</option>
+        </select>
+      </div>
+      <div class="field" id="promo-target-field">
+        <label for="promo-scope-target">¿Cuál?</label>
+        <select class="cell-input" id="promo-scope-target" required></select>
+        <div class="autocomplete-wrap" id="promo-product-wrap" hidden>
+          <input class="cell-input" id="promo-product-search" type="text" autocomplete="off" placeholder="Escribe el nombre del producto…">
+          <div class="autocomplete-list" id="promo-product-suggestions" hidden></div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="promo-discount">Descuento %</label>
+        <input class="cell-input" id="promo-discount" type="number" min="1" max="100" step="1" required>
+      </div>
+      <div class="field">
+        <label for="promo-starts">Empieza (opcional)</label>
+        <input class="cell-input" id="promo-starts" type="date">
+      </div>
+      <div class="field">
+        <label for="promo-ends">Termina (opcional)</label>
+        <input class="cell-input" id="promo-ends" type="date">
+      </div>
+      <div class="submit-cell">
+        <button class="btn btn-primary btn-sm" type="submit">Crear promoción</button>
+      </div>
+    </form>
+
+    <div class="grid-head"><h2>Promociones</h2></div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Nombre</th><th>Aplica a</th><th>Descuento</th><th>Vigencia</th><th>Activa</th><th></th></tr></thead>
+        <tbody id="promo-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- Líneas y categorías ---------- -->
+  <section class="tab-panel" id="tab-taxonomy" hidden>
+    <div class="grid-head"><h2>Líneas de producto</h2></div>
+    <form class="add-form" id="line-form" style="grid-template-columns: 1fr auto;">
+      <div class="field"><label for="line-name">Nueva línea</label><input class="cell-input" id="line-name" type="text" placeholder="Ej. Ropa" required></div>
+      <div class="submit-cell"><button class="btn btn-primary btn-sm" type="submit">Agregar</button></div>
+    </form>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Línea</th><th></th></tr></thead>
+        <tbody id="lines-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="grid-head"><h2>Categorías</h2></div>
+    <form class="add-form" id="category-form">
+      <div class="field">
+        <label for="cat-line">Línea</label>
+        <select class="cell-input" id="cat-line" required></select>
+      </div>
+      <div class="field">
+        <label for="cat-name">Nueva categoría</label>
+        <input class="cell-input" id="cat-name" type="text" placeholder="Ej. Fragancias" required>
+      </div>
+      <div class="submit-cell"><button class="btn btn-primary btn-sm" type="submit">Agregar</button></div>
+    </form>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Línea</th><th>Categoría</th><th></th></tr></thead>
+        <tbody id="categories-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="grid-head"><h2>Subcategorías</h2></div>
+    <form class="add-form" id="subcategory-form">
+      <div class="field">
+        <label for="subcat-line">Línea</label>
+        <select class="cell-input" id="subcat-line" required></select>
+      </div>
+      <div class="field">
+        <label for="subcat-category">Categoría</label>
+        <select class="cell-input" id="subcat-category" required></select>
+      </div>
+      <div class="field">
+        <label for="subcat-name">Nueva subcategoría</label>
+        <input class="cell-input" id="subcat-name" type="text" placeholder="Ej. Mochilas" required>
+      </div>
+      <div class="submit-cell"><button class="btn btn-primary btn-sm" type="submit">Agregar</button></div>
+    </form>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Línea</th><th>Categoría</th><th>Subcategoría</th><th></th></tr></thead>
+        <tbody id="subcategories-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- Reportes ---------- -->
+  <section class="tab-panel" id="tab-reports" hidden>
+    <div class="grid-head"><h2>Inventario por línea</h2></div>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Línea</th><th>Productos</th><th>Piezas (online + física)</th><th>Costo total</th><th>Valor de venta</th><th>Ganancia potencial</th></tr></thead>
+        <tbody id="report-lines-tbody"></tbody>
+      </table>
+    </div>
+    <div class="grid-head"><h2>Piezas con 1 disponible o agotadas</h2></div>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Producto</th><th>Línea</th><th>Stock online</th><th>Stock física</th></tr></thead>
+        <tbody id="report-low-tbody"></tbody>
+      </table>
+    </div>
+    <div class="grid-head"><h2>Ventas por mes</h2></div>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Mes</th><th>Ventas</th><th>Piezas vendidas</th><th>Total vendido</th><th>Costo real</th><th>Ganancia real</th></tr></thead>
+        <tbody id="report-sales-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="grid-head">
+      <h2>Ventas por categoría y producto</h2>
+      <select class="cell-input" id="report-period-filter" style="max-width:200px;">
+        <option value="all">Todos los periodos</option>
+      </select>
+    </div>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Categoría</th><th>Ventas</th><th>Piezas vendidas</th><th>Total vendido</th><th>Costo real</th><th>Ganancia real</th></tr></thead>
+        <tbody id="report-category-tbody"></tbody>
+      </table>
+    </div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Producto</th><th>Ventas</th><th>Piezas vendidas</th><th>Total vendido</th><th>Costo real</th><th>Ganancia real</th></tr></thead>
+        <tbody id="report-product-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- Finanzas ---------- -->
+  <section class="tab-panel" id="tab-finance" hidden>
+    <div class="grid-head"><h2>Gastos fijos</h2></div>
+    <form class="add-form" id="expense-form">
+      <div class="field" style="grid-column: span 2;">
+        <label for="expense-name">Nombre</label>
+        <input class="cell-input" id="expense-name" type="text" required placeholder="Ej. Renta">
+      </div>
+      <div class="field">
+        <label for="expense-amount">Monto mensual</label>
+        <input class="cell-input" id="expense-amount" type="number" min="0" step="0.01" required>
+      </div>
+      <div class="submit-cell">
+        <button class="btn btn-primary btn-sm" type="submit">Agregar gasto</button>
+      </div>
+    </form>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Nombre</th><th>Monto mensual</th><th>Activo</th><th></th></tr></thead>
+        <tbody id="finance-expenses-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="grid-head"><h2>Punto de equilibrio de este mes</h2></div>
+    <div class="stat-row" id="finance-summary">
+      <div class="stat-tile"><strong id="finance-margin">—</strong><span>Ganancia de este mes</span></div>
+      <div class="stat-tile"><strong id="finance-expenses-total">—</strong><span>Gastos fijos activos</span></div>
+      <div class="stat-tile" id="finance-result-tile"><strong id="finance-result">—</strong><span id="finance-result-label">Punto de equilibrio</span></div>
+    </div>
+    <p id="finance-no-expenses-msg" hidden style="color:var(--ink-soft);">Agrega tus gastos fijos para ver tu punto de equilibrio este mes.</p>
+  </section>
+
+  <!-- ---------- Usuarios ---------- -->
+  <section class="tab-panel" id="tab-users" hidden>
+    <div class="grid-head"><h2>Invitar vendedor</h2></div>
+    <form class="add-form" id="invite-form" style="grid-template-columns: 1fr auto;">
+      <div class="field">
+        <label for="invite-email">Correo del vendedor</label>
+        <input class="cell-input" id="invite-email" type="email" required placeholder="empleado@correo.com">
+      </div>
+      <div class="submit-cell"><button class="btn btn-primary btn-sm" type="submit">Invitar</button></div>
+    </form>
+    <p class="form-error" id="invite-error"></p>
+
+    <div class="grid-head"><h2>Vendedores</h2></div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Correo</th><th>Invitado</th></tr></thead>
+        <tbody id="users-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="grid-head" style="margin-top:32px;"><h2>Permisos</h2></div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <tbody>
+          <tr>
+            <td>Los vendedores pueden cancelar apartados</td>
+            <td><input type="checkbox" id="permission-cancel-layaways"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- Ajustes ---------- -->
+  <section class="tab-panel" id="tab-settings" hidden>
+    <div class="grid-head"><h2>Visibilidad de líneas</h2></div>
+    <div class="table-wrap" style="margin-bottom:32px;">
+      <table class="admin-table">
+        <thead><tr><th>Línea</th><th>Visible al público</th></tr></thead>
+        <tbody id="settings-lines-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="grid-head"><h2>Página principal</h2></div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <tbody>
+          <tr>
+            <td>Mostrar contador de "Productos activos"</td>
+            <td><input type="checkbox" id="setting-show-stat"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid-head"><h2>Seguridad</h2></div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <tbody>
+          <tr>
+            <td>Código para borrar ventas y productos</td>
+            <td><input class="cell-input" id="setting-delete-pin" type="text" style="max-width:120px;"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<div id="print-inventory"></div>
+
+<script src="js/vendor/supabase.umd.js"></script>
+<script type="module" src="js/admin.js"></script>
+</body>
+</html>
