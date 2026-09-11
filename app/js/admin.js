@@ -173,6 +173,7 @@ async function refreshAuthUI() {
       logoutBtn.hidden = true;
       changePasswordBtn.hidden = true;
       stopCountCamera();
+      stopSellCamera();
       return;
     }
     CURRENT_ROLE = profile.role;
@@ -191,6 +192,7 @@ async function refreshAuthUI() {
     changePasswordBtn.hidden = true;
     changePasswordView.hidden = true;
     stopCountCamera();
+    stopSellCamera();
   }
 }
 
@@ -226,6 +228,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 
 logoutBtn.addEventListener('click', async () => {
   stopCountCamera();
+  stopSellCamera();
   await supabase.auth.signOut();
   refreshAuthUI();
 });
@@ -570,7 +573,7 @@ document.getElementById('admin-published-filter').addEventListener('change', (e)
 // ---------- Vender tab (POS física) ----------
 
 let SELL_CART = []; // [{ kind: 'product', product_id, quantity } | { kind: 'free', description, amount }]
-let VENDER_TODAY = { total: 0, count: 0, pieces: 0 };
+let VENDER_TODAY = { total: null, count: null, pieces: null };
 let LAST_SELL_RECEIPT = null; // { lines: [{label, quantity, subtotal}], total, cash }
 
 function sellCartTotal() {
@@ -720,7 +723,11 @@ async function loadVenderToday() {
     .eq('channel', 'fisica')
     .neq('payment_method', 'apartado')
     .gte('created_at', startOfToday);
-  if (salesErr) { console.error(salesErr); return; }
+  if (salesErr) {
+    console.error(salesErr);
+    VENDER_TODAY = { total: null, count: null, pieces: null };
+    return;
+  }
 
   let pieces = 0;
   if (sales.length > 0) {
@@ -728,7 +735,11 @@ async function loadVenderToday() {
       .from('sale_items_view')
       .select('sale_id, quantity')
       .in('sale_id', sales.map(s => s.id));
-    if (itemsErr) { console.error(itemsErr); return; }
+    if (itemsErr) {
+      console.error(itemsErr);
+      VENDER_TODAY = { total: null, count: null, pieces: null };
+      return;
+    }
     pieces = items.reduce((s, i) => s + i.quantity, 0);
   }
 
@@ -745,14 +756,14 @@ function renderSellHome() {
   const avgTicket = VENDER_TODAY.count > 0 ? VENDER_TODAY.total / VENDER_TODAY.count : null;
   if (isAdmin) {
     statsEl.innerHTML = `
-      <div class="stat-tile"><strong>${fmt.format(VENDER_TODAY.total)}</strong><span>Vendido hoy</span></div>
+      <div class="stat-tile"><strong>${VENDER_TODAY.total === null ? '—' : fmt.format(VENDER_TODAY.total)}</strong><span>Vendido hoy</span></div>
       <div class="stat-tile"><strong>${avgTicket === null ? '—' : fmt.format(avgTicket)}</strong><span>Ticket promedio</span></div>
-      <div class="stat-tile"><strong>${VENDER_TODAY.pieces}</strong><span>Piezas vendidas hoy</span></div>
-      <div class="stat-tile"><strong>${VENDER_TODAY.count}</strong><span>Ventas del día</span></div>`;
+      <div class="stat-tile"><strong>${VENDER_TODAY.pieces === null ? '—' : VENDER_TODAY.pieces}</strong><span>Piezas vendidas hoy</span></div>
+      <div class="stat-tile"><strong>${VENDER_TODAY.count === null ? '—' : VENDER_TODAY.count}</strong><span>Ventas del día</span></div>`;
   } else {
     statsEl.innerHTML = `
-      <div class="stat-tile"><strong>${VENDER_TODAY.pieces}</strong><span>Piezas vendidas hoy</span></div>
-      <div class="stat-tile"><strong>${VENDER_TODAY.count}</strong><span>Ventas del día</span></div>`;
+      <div class="stat-tile"><strong>${VENDER_TODAY.pieces === null ? '—' : VENDER_TODAY.pieces}</strong><span>Piezas vendidas hoy</span></div>
+      <div class="stat-tile"><strong>${VENDER_TODAY.count === null ? '—' : VENDER_TODAY.count}</strong><span>Ventas del día</span></div>`;
   }
 }
 
@@ -954,6 +965,8 @@ function resetSellView() {
   document.getElementById('sell-free-error').textContent = '';
   document.getElementById('sell-error').textContent = '';
   document.getElementById('sell-cash').value = '';
+  document.getElementById('sell-history-from').value = todayDateStr();
+  document.getElementById('sell-history-to').value = todayDateStr();
   renderSellCart();
   setSellView('home');
 }
