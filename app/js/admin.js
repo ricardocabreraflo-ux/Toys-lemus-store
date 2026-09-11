@@ -733,11 +733,179 @@ function renderSellHome() {
   }
 }
 
-function stopSellCamera() {
-  // La Tarea 3 reemplaza este cuerpo por el manejo real de la cámara.
-  // Se define aquí, sin operación, para que setSellView()/setActiveTab()
-  // ya puedan llamarla sin error antes de que exista la cámara.
+function renderSellSuggestions(query) {
+  const list = document.getElementById('sell-suggestions');
+  const q = query.trim().toLowerCase();
+  if (!q) { list.hidden = true; list.innerHTML = ''; return; }
+  const matches = PRODUCTS.filter(p => p.name.toLowerCase().includes(q)).slice(0, 8);
+  if (matches.length === 0) { list.hidden = true; list.innerHTML = ''; return; }
+  list.innerHTML = matches.map(p =>
+    `<button type="button" class="autocomplete-item" data-id="${p.id}">${escapeHtml(p.name)}</button>`
+  ).join('');
+  list.hidden = false;
 }
+
+document.getElementById('sell-search').addEventListener('input', (e) => {
+  const raw = e.target.value;
+  const q = raw.trim().toLowerCase();
+  const list = document.getElementById('sell-suggestions');
+  if (!q) { list.hidden = true; list.innerHTML = ''; return; }
+
+  const exact = PRODUCTS.find(p => (p.code || '').toLowerCase() === q);
+  const ambiguous = exact && PRODUCTS.some(p => {
+    const c = (p.code || '').toLowerCase();
+    return c !== q && c.startsWith(q);
+  });
+  if (exact && !ambiguous) {
+    addToSellCart(exact.id);
+    e.target.value = '';
+    list.hidden = true;
+    list.innerHTML = '';
+    return;
+  }
+  renderSellSuggestions(raw);
+});
+
+document.getElementById('sell-search').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const raw = e.target.value.trim();
+  if (!raw) return;
+  const list = document.getElementById('sell-suggestions');
+  const exactOnEnter = PRODUCTS.find(p => (p.code || '').toLowerCase() === raw.toLowerCase());
+  if (exactOnEnter) {
+    addToSellCart(exactOnEnter.id);
+    e.target.value = '';
+    list.hidden = true;
+    list.innerHTML = '';
+    return;
+  }
+  if (!list.hidden && list.children.length > 0) return; // hay coincidencias por nombre, se elige con clic
+  showToast('Producto no encontrado', true);
+  e.target.value = '';
+  list.hidden = true;
+  list.innerHTML = '';
+});
+
+document.getElementById('sell-suggestions').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-id]');
+  if (!btn) return;
+  addToSellCart(btn.dataset.id);
+  document.getElementById('sell-search').value = '';
+  document.getElementById('sell-suggestions').hidden = true;
+  document.getElementById('sell-suggestions').innerHTML = '';
+  document.getElementById('sell-search').focus();
+});
+
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('sell-search-wrap');
+  const list = document.getElementById('sell-suggestions');
+  if (!list.hidden && !wrap.contains(e.target)) list.hidden = true;
+});
+
+let sellCameraStream = null;
+let sellBarcodeDetector = null;
+let sellScanLoopActive = false;
+let lastSellScannedCode = null;
+let lastSellScannedAt = 0;
+let sellCameraGen = 0;
+
+if ('BarcodeDetector' in window) {
+  document.getElementById('sell-camera-btn').hidden = false;
+}
+
+function handleSellScanValue(raw) {
+  const q = raw.trim().toLowerCase();
+  const match = PRODUCTS.find(p => (p.code || '').toLowerCase() === q);
+  if (match) { addToSellCart(match.id); return; }
+  showToast('Producto no encontrado', true);
+}
+
+async function scanSellCameraLoop(myGen) {
+  const video = document.getElementById('sell-camera-video');
+  let failureCount = 0;
+  while (sellScanLoopActive && myGen === sellCameraGen) {
+    try {
+      const codes = await sellBarcodeDetector.detect(video);
+      if (!sellScanLoopActive || myGen !== sellCameraGen) break;
+      if (codes.length > 0) {
+        const raw = codes[0].rawValue;
+        const now = Date.now();
+        if (raw !== lastSellScannedCode || now - lastSellScannedAt > 1500) {
+          lastSellScannedCode = raw;
+          lastSellScannedAt = now;
+          handleSellScanValue(raw);
+        }
+      }
+      failureCount = 0;
+    } catch (err) {
+      failureCount++;
+      if (failureCount === 1 || failureCount % 20 === 0) {
+        console.error('Vender: fallo en detect() de código de barras', err);
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+}
+
+async function startSellCamera() {
+  const myGen = ++sellCameraGen;
+  const btn = document.getElementById('sell-camera-btn');
+  btn.disabled = true;
+
+  if (!sellBarcodeDetector) {
+    try {
+      sellBarcodeDetector = new BarcodeDetector();
+    } catch (err) {
+      showToast('No se pudo iniciar el lector de códigos', true);
+      console.error(err);
+      if (myGen === sellCameraGen) btn.disabled = false;
+      return;
+    }
+  }
+
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+  } catch (err) {
+    showToast('No se pudo acceder a la cámara', true);
+    console.error(err);
+    if (myGen === sellCameraGen) btn.disabled = false;
+    return;
+  }
+  if (myGen !== sellCameraGen) {
+    stream.getTracks().forEach(track => track.stop());
+    return;
+  }
+  sellCameraStream = stream;
+  const video = document.getElementById('sell-camera-video');
+  video.srcObject = sellCameraStream;
+  video.hidden = false;
+  btn.textContent = 'Cerrar cámara';
+  btn.disabled = false;
+  sellScanLoopActive = true;
+  scanSellCameraLoop(myGen);
+}
+
+function stopSellCamera() {
+  sellCameraGen++;
+  sellScanLoopActive = false;
+  lastSellScannedCode = null;
+  if (sellCameraStream) {
+    sellCameraStream.getTracks().forEach(track => track.stop());
+    sellCameraStream = null;
+  }
+  const video = document.getElementById('sell-camera-video');
+  video.srcObject = null;
+  video.hidden = true;
+  const btn = document.getElementById('sell-camera-btn');
+  btn.textContent = 'Escanear con cámara';
+  btn.disabled = false;
+}
+
+document.getElementById('sell-camera-btn').addEventListener('click', () => {
+  if (sellCameraStream) stopSellCamera();
+  else startSellCamera();
+});
 
 function setSellView(view) {
   document.getElementById('sell-home').hidden = view !== 'home';
