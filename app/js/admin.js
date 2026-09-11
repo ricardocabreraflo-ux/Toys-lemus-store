@@ -936,6 +936,13 @@ function setSellView(view) {
   document.getElementById('sell-sale-confirm').hidden = view !== 'sale-confirm';
   document.getElementById('sell-history').hidden = view !== 'history';
   if (view !== 'sale') stopSellCamera();
+  if (view === 'history') {
+    const fromEl = document.getElementById('sell-history-from');
+    const toEl = document.getElementById('sell-history-to');
+    if (!fromEl.value) fromEl.value = todayDateStr();
+    if (!toEl.value) toEl.value = todayDateStr();
+    loadAndRenderSellHistory();
+  }
 }
 
 function resetSellView() {
@@ -958,6 +965,78 @@ document.getElementById('sell-goto-layaways-btn').addEventListener('click', () =
 document.getElementById('sell-confirm-new-btn').addEventListener('click', () => resetSellView());
 document.getElementById('sell-confirm-history-btn').addEventListener('click', () => setSellView('history'));
 document.getElementById('sell-history-back-btn').addEventListener('click', () => setSellView('home'));
+
+function todayDateStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+let SELL_HISTORY_ROWS = [];
+
+async function loadPhysicalSalesRange(fromStr, toStr) {
+  const fromISO = new Date(`${fromStr}T00:00:00`).toISOString();
+  const toISO = new Date(`${toStr}T23:59:59.999`).toISOString();
+  const { data, error } = await supabase
+    .from('sales')
+    .select('id, total, created_at')
+    .eq('channel', 'fisica')
+    .neq('payment_method', 'apartado')
+    .gte('created_at', fromISO)
+    .lte('created_at', toISO)
+    .order('created_at', { ascending: false });
+  if (error) { console.error(error); return null; }
+  return data;
+}
+
+function renderSellHistory() {
+  document.getElementById('sell-history-action-header').hidden = CURRENT_ROLE !== 'admin';
+  const tbody = document.getElementById('sell-history-tbody');
+  tbody.innerHTML = SELL_HISTORY_ROWS.length === 0
+    ? `<tr><td colspan="3" style="color:var(--ink-soft);">Sin ventas físicas en este rango.</td></tr>`
+    : SELL_HISTORY_ROWS.map(s => `
+      <tr data-id="${s.id}">
+        <td>${new Date(s.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+        <td>${fmt.format(s.total)}</td>
+        <td>
+          ${CURRENT_ROLE === 'admin' ? `<button class="icon-mini danger" data-role="sale-delete" type="button" aria-label="Eliminar venta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+          </button>` : ''}
+        </td>
+      </tr>`).join('');
+  tbody.querySelectorAll('[data-role="sale-delete"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('tr').dataset.id;
+      if (!askForDeletePin('¿Eliminar esta venta? El stock vendido regresa al inventario.')) return;
+      const { error } = await supabase.rpc('delete_sale', { p_sale_id: id });
+      if (error) { showToast(error.message, true); return; }
+      showToast('Venta eliminada');
+      await loadAndRenderSellHistory();
+      await reloadProducts();
+      renderTable();
+      await loadVenderToday();
+      renderSellHome();
+      renderDashboard();
+    });
+  });
+}
+
+async function loadAndRenderSellHistory() {
+  const fromEl = document.getElementById('sell-history-from');
+  const toEl = document.getElementById('sell-history-to');
+  const errEl = document.getElementById('sell-history-error');
+  errEl.textContent = '';
+  if (fromEl.value && toEl.value && fromEl.value > toEl.value) {
+    errEl.textContent = 'La fecha "Desde" no puede ser posterior a "Hasta".';
+    return;
+  }
+  const rows = await loadPhysicalSalesRange(fromEl.value, toEl.value);
+  if (rows === null) { errEl.textContent = 'No se pudo cargar el historial.'; return; }
+  SELL_HISTORY_ROWS = rows;
+  renderSellHistory();
+}
+
+document.getElementById('sell-history-from').addEventListener('change', loadAndRenderSellHistory);
+document.getElementById('sell-history-to').addEventListener('change', loadAndRenderSellHistory);
 
 // ---------- Pedidos tab (online orders) ----------
 
