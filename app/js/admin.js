@@ -16,7 +16,6 @@ let publishedOnly = false;
 let CURRENT_ROLE = null; // 'admin' | 'vendedor'
 let SITE_SETTINGS = { show_products_stat: false };
 let SECURITY_SETTINGS = { delete_pin: '0000' };
-let RECENT_PHYSICAL_SALES = [];
 let VENDEDOR_PERMISSIONS = { can_cancel_layaways: false };
 let SALES_REPORT_SALES = [];
 let SALES_REPORT_ITEMS = [];
@@ -96,6 +95,8 @@ function setActiveTab(tabKey) {
   document.querySelectorAll('.tab-btn').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tabKey)));
   document.querySelectorAll('.tab-panel').forEach(p => { p.hidden = p.id !== `tab-${tabKey}`; });
   if (tabKey !== 'count') stopCountCamera();
+  if (tabKey !== 'sell') stopSellCamera();
+  if (tabKey === 'sell') resetSellView();
   closeMoreSheet();
 }
 
@@ -568,28 +569,23 @@ document.getElementById('admin-published-filter').addEventListener('change', (e)
 
 // ---------- Vender tab (POS física) ----------
 
-let SELL_CART = []; // [{ product_id, quantity }]
+let SELL_CART = []; // [{ kind: 'product', product_id, quantity } | { kind: 'free', description, amount }]
+let VENDER_TODAY = { total: 0, count: 0, pieces: 0 };
+let LAST_SELL_RECEIPT = null; // { lines: [{label, quantity, subtotal}], total, cash }
 
-function refreshSellProductOptions() {
-  const sel = document.getElementById('sell-product');
-  const current = sel.value;
-  sel.innerHTML = PRODUCTS
-    .filter(p => p.stock_fisica > 0)
-    .map(p => `<option value="${p.id}">${p.code ? escapeHtml(p.code) + ' — ' : ''}${escapeHtml(p.name)} (Física: ${p.stock_fisica})</option>`)
-    .join('');
-  if (current && PRODUCTS.some(p => p.id === current)) sel.value = current;
+function sellCartTotal() {
+  return SELL_CART.reduce((s, item) => {
+    if (item.kind === 'product') return s + (productById(item.product_id)?.price || 0) * item.quantity;
+    return s + item.amount;
+  }, 0);
 }
 
-document.getElementById('sell-add-form').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const productId = document.getElementById('sell-product').value;
-  const qty = Math.round(Number(document.getElementById('sell-qty').value) || 0);
-  if (!productId || qty <= 0) return;
-  const existing = SELL_CART.find(i => i.product_id === productId);
-  if (existing) existing.quantity += qty;
-  else SELL_CART.push({ product_id: productId, quantity: qty });
+function addToSellCart(productId) {
+  const existing = SELL_CART.find(i => i.kind === 'product' && i.product_id === productId);
+  if (existing) existing.quantity += 1;
+  else SELL_CART.push({ kind: 'product', product_id: productId, quantity: 1 });
   renderSellCart();
-});
+}
 
 function renderSellCart() {
   const tbody = document.getElementById('sell-cart-tbody');
@@ -597,13 +593,24 @@ function renderSellCart() {
     tbody.innerHTML = `<tr><td colspan="5" style="color:var(--ink-soft);">Carrito vacío.</td></tr>`;
   } else {
     tbody.innerHTML = SELL_CART.map((item, idx) => {
-      const p = productById(item.product_id);
-      const subtotal = (p?.price || 0) * item.quantity;
+      if (item.kind === 'product') {
+        const p = productById(item.product_id);
+        const subtotal = (p?.price || 0) * item.quantity;
+        return `<tr>
+          <td>${escapeHtml(p?.name || '—')}</td>
+          <td>${item.quantity}</td>
+          <td>${fmt.format(p?.price || 0)}</td>
+          <td>${fmt.format(subtotal)}</td>
+          <td><button class="icon-mini danger" type="button" data-idx="${idx}" aria-label="Quitar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button></td>
+        </tr>`;
+      }
       return `<tr>
-        <td>${escapeHtml(p?.name || '—')}</td>
-        <td>${item.quantity}</td>
-        <td>${fmt.format(p?.price || 0)}</td>
-        <td>${fmt.format(subtotal)}</td>
+        <td>${escapeHtml(item.description)}</td>
+        <td>1</td>
+        <td>${fmt.format(item.amount)}</td>
+        <td>${fmt.format(item.amount)}</td>
         <td><button class="icon-mini danger" type="button" data-idx="${idx}" aria-label="Quitar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button></td>
@@ -616,13 +623,12 @@ function renderSellCart() {
       });
     });
   }
-  const total = SELL_CART.reduce((s, item) => s + (productById(item.product_id)?.price || 0) * item.quantity, 0);
-  document.getElementById('sell-total').textContent = fmt.format(total);
+  document.getElementById('sell-total').textContent = fmt.format(sellCartTotal());
   updateSellChange();
 }
 
 function updateSellChange() {
-  const total = SELL_CART.reduce((s, item) => s + (productById(item.product_id)?.price || 0) * item.quantity, 0);
+  const total = sellCartTotal();
   const cash = Number(document.getElementById('sell-cash').value) || 0;
   const changeEl = document.getElementById('sell-change');
   changeEl.textContent = cash > 0 ? `Cambio: ${fmt.format(Math.max(0, cash - total))}` : '';
@@ -637,10 +643,19 @@ document.getElementById('sell-confirm-btn').addEventListener('click', async (e) 
 
   btn.disabled = true;
   try {
-    const { error } = await supabase.rpc('create_sale_fisica', {
-      p_items: SELL_CART.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
-    });
+    const p_items = SELL_CART.map(item => item.kind === 'product'
+      ? { product_id: item.product_id, quantity: item.quantity }
+      : { description: item.description, amount: item.amount });
+    const { error } = await supabase.rpc('create_sale_fisica', { p_items });
     if (error) { errEl.textContent = error.message; return; }
+
+    LAST_SELL_RECEIPT = {
+      lines: SELL_CART.map(item => item.kind === 'product'
+        ? { label: productById(item.product_id)?.name || '—', quantity: item.quantity, subtotal: (productById(item.product_id)?.price || 0) * item.quantity }
+        : { label: item.description, quantity: 1, subtotal: item.amount }),
+      total: sellCartTotal(),
+      cash: Number(document.getElementById('sell-cash').value) || 0,
+    };
 
     showToast('Venta registrada');
     SELL_CART = [];
@@ -648,57 +663,110 @@ document.getElementById('sell-confirm-btn').addEventListener('click', async (e) 
     renderSellCart();
     await reloadProducts();
     renderTable();
-    refreshSellProductOptions();
-    refreshTransferProductOptions();
+    await loadVenderToday();
+    renderSellHome();
     renderDashboard();
+    renderSellConfirm();
+    setSellView('sale-confirm');
   } finally {
     btn.disabled = false;
   }
 });
 
-async function loadRecentSales() {
-  const { data, error } = await supabase
-    .from('sales')
-    .select('id, total, created_at')
-    .eq('channel', 'fisica')
-    .neq('payment_method', 'apartado')
-    .order('created_at', { ascending: false })
-    .limit(20);
-  if (error) { console.error(error); return; }
-  RECENT_PHYSICAL_SALES = data;
+function renderSellConfirm() {
+  const receipt = LAST_SELL_RECEIPT;
+  const tbody = document.getElementById('sell-confirm-tbody');
+  tbody.innerHTML = receipt.lines.map(l => `
+    <tr>
+      <td>${escapeHtml(l.label)}</td>
+      <td>${l.quantity}</td>
+      <td>${fmt.format(l.subtotal)}</td>
+    </tr>`).join('');
+  document.getElementById('sell-confirm-total').textContent = fmt.format(receipt.total);
+  const changeEl = document.getElementById('sell-confirm-change');
+  changeEl.textContent = receipt.cash > 0
+    ? `Efectivo recibido: ${fmt.format(receipt.cash)} — Cambio: ${fmt.format(Math.max(0, receipt.cash - receipt.total))}`
+    : '';
 }
 
-function renderRecentSales() {
-  document.getElementById('recent-sales-action-header').hidden = CURRENT_ROLE !== 'admin';
-  const tbody = document.getElementById('recent-sales-tbody');
-  tbody.innerHTML = RECENT_PHYSICAL_SALES.length === 0
-    ? `<tr><td colspan="3" style="color:var(--ink-soft);">Sin ventas físicas todavía.</td></tr>`
-    : RECENT_PHYSICAL_SALES.map(s => `
-      <tr data-id="${s.id}">
-        <td>${new Date(s.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</td>
-        <td>${fmt.format(s.total)}</td>
-        <td>
-          ${CURRENT_ROLE === 'admin' ? `<button class="icon-mini danger" data-role="sale-delete" type="button" aria-label="Eliminar venta">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
-          </button>` : ''}
-        </td>
-      </tr>`).join('');
-  tbody.querySelectorAll('[data-role="sale-delete"]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.closest('tr').dataset.id;
-      if (!askForDeletePin('¿Eliminar esta venta? El stock vendido regresa al inventario.')) return;
-      const { error } = await supabase.rpc('delete_sale', { p_sale_id: id });
-      if (error) { showToast(error.message, true); return; }
-      showToast('Venta eliminada');
-      await loadRecentSales();
-      renderRecentSales();
-      await reloadProducts();
-      renderTable();
-      refreshSellProductOptions();
-      renderDashboard();
-    });
-  });
+async function loadVenderToday() {
+  const startOfToday = new Date(new Date().toDateString()).toISOString();
+  const { data: sales, error: salesErr } = await supabase
+    .from('sales')
+    .select('id, total')
+    .eq('channel', 'fisica')
+    .neq('payment_method', 'apartado')
+    .gte('created_at', startOfToday);
+  if (salesErr) { console.error(salesErr); return; }
+
+  let pieces = 0;
+  if (sales.length > 0) {
+    const { data: items, error: itemsErr } = await supabase
+      .from('sale_items_view')
+      .select('sale_id, quantity')
+      .in('sale_id', sales.map(s => s.id));
+    if (itemsErr) { console.error(itemsErr); return; }
+    pieces = items.reduce((s, i) => s + i.quantity, 0);
+  }
+
+  VENDER_TODAY = {
+    total: sales.reduce((s, r) => s + Number(r.total), 0),
+    count: sales.length,
+    pieces,
+  };
 }
+
+function renderSellHome() {
+  const isAdmin = CURRENT_ROLE === 'admin';
+  const statsEl = document.getElementById('sell-today-stats');
+  const avgTicket = VENDER_TODAY.count > 0 ? VENDER_TODAY.total / VENDER_TODAY.count : null;
+  if (isAdmin) {
+    statsEl.innerHTML = `
+      <div class="stat-tile"><strong>${fmt.format(VENDER_TODAY.total)}</strong><span>Vendido hoy</span></div>
+      <div class="stat-tile"><strong>${avgTicket === null ? '—' : fmt.format(avgTicket)}</strong><span>Ticket promedio</span></div>
+      <div class="stat-tile"><strong>${VENDER_TODAY.pieces}</strong><span>Piezas vendidas hoy</span></div>
+      <div class="stat-tile"><strong>${VENDER_TODAY.count}</strong><span>Ventas del día</span></div>`;
+  } else {
+    statsEl.innerHTML = `
+      <div class="stat-tile"><strong>${VENDER_TODAY.pieces}</strong><span>Piezas vendidas hoy</span></div>
+      <div class="stat-tile"><strong>${VENDER_TODAY.count}</strong><span>Ventas del día</span></div>`;
+  }
+}
+
+function stopSellCamera() {
+  // La Tarea 3 reemplaza este cuerpo por el manejo real de la cámara.
+  // Se define aquí, sin operación, para que setSellView()/setActiveTab()
+  // ya puedan llamarla sin error antes de que exista la cámara.
+}
+
+function setSellView(view) {
+  document.getElementById('sell-home').hidden = view !== 'home';
+  document.getElementById('sell-sale').hidden = view !== 'sale';
+  document.getElementById('sell-sale-confirm').hidden = view !== 'sale-confirm';
+  document.getElementById('sell-history').hidden = view !== 'history';
+  if (view !== 'sale') stopSellCamera();
+}
+
+function resetSellView() {
+  SELL_CART = [];
+  document.getElementById('sell-search').value = '';
+  document.getElementById('sell-suggestions').hidden = true;
+  document.getElementById('sell-suggestions').innerHTML = '';
+  document.getElementById('sell-free-form').hidden = true;
+  document.getElementById('sell-free-error').textContent = '';
+  document.getElementById('sell-error').textContent = '';
+  document.getElementById('sell-cash').value = '';
+  renderSellCart();
+  setSellView('home');
+}
+
+document.getElementById('sell-start-btn').addEventListener('click', () => setSellView('sale'));
+document.getElementById('sell-sale-back-btn').addEventListener('click', () => resetSellView());
+document.getElementById('sell-goto-history-btn').addEventListener('click', () => setSellView('history'));
+document.getElementById('sell-goto-layaways-btn').addEventListener('click', () => setActiveTab('layaways'));
+document.getElementById('sell-confirm-new-btn').addEventListener('click', () => resetSellView());
+document.getElementById('sell-confirm-history-btn').addEventListener('click', () => setSellView('history'));
+document.getElementById('sell-history-back-btn').addEventListener('click', () => setSellView('home'));
 
 // ---------- Pedidos tab (online orders) ----------
 
@@ -883,7 +951,6 @@ document.getElementById('layaway-confirm-btn').addEventListener('click', async (
     renderLayawayCart();
     await reloadProducts();
     renderTable();
-    refreshSellProductOptions();
     refreshTransferProductOptions();
     refreshLayawayProductOptions();
     renderDashboard();
@@ -999,7 +1066,6 @@ function renderLayaways() {
         showToast('Apartado cancelado');
         await reloadProducts();
         renderTable();
-        refreshSellProductOptions();
         refreshTransferProductOptions();
         refreshLayawayProductOptions();
         renderDashboard();
@@ -1241,7 +1307,6 @@ document.getElementById('count-apply-btn').addEventListener('click', async (e) =
     document.getElementById('count-diff-wrap').hidden = true;
     await reloadProducts();
     renderTable();
-    refreshSellProductOptions();
     refreshTransferProductOptions();
     refreshLayawayProductOptions();
     renderDashboard();
@@ -2055,14 +2120,13 @@ async function loadEverything() {
     await loadVendedores();
     await loadOrders();
     await loadLayaways();
-    await loadRecentSales();
+    await loadVenderToday();
 
     initInventoryForm();
     initInventoryFilters();
     refreshPromoScopeTarget();
     optionsForLines(document.getElementById('cat-line'));
     refreshTransferProductOptions();
-    refreshSellProductOptions();
     refreshLayawayProductOptions();
 
     renderTable();
@@ -2077,7 +2141,7 @@ async function loadEverything() {
     renderUsers();
     renderOrders();
     renderLayaways();
-    renderRecentSales();
+    renderSellHome();
     renderDashboard();
   } catch (err) {
     showToast('No se pudo cargar el panel', true);
