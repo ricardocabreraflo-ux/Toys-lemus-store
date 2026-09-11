@@ -96,7 +96,7 @@ function setActiveTab(tabKey) {
   document.querySelectorAll('.tab-panel').forEach(p => { p.hidden = p.id !== `tab-${tabKey}`; });
   if (tabKey !== 'count') stopCountCamera();
   if (tabKey !== 'sell') stopSellCamera();
-  if (tabKey === 'sell') resetSellView();
+  if (tabKey === 'sell') { resetSellView(); openSellOptionsSheet(); }
   closeMoreSheet();
 }
 
