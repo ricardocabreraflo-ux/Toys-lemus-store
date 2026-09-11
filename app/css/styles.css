@@ -258,6 +258,19 @@ main { padding: 40px 0 100px; }
 .toast svg { width: 16px; height: 16px; color: var(--accent-3); flex-shrink: 0; }
 .toast.error svg { color: var(--stock-low); }
 
+#pwa-update-banner {
+  position: fixed; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+  z-index: 200; display: flex; align-items: center; gap: 10px;
+  background: color-mix(in srgb, var(--ink) 90%, transparent); color: var(--bg);
+  backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-radius: 999px; padding: 8px 8px 8px 16px; box-shadow: var(--shadow-lg);
+  font-size: 0.86rem; font-weight: 700; max-width: calc(100vw - 32px);
+}
+#pwa-update-banner button {
+  background: var(--accent); color: var(--accent-ink); border: none; border-radius: 999px;
+  padding: 7px 14px; font-weight: 700; font-size: 0.82rem; cursor: pointer; white-space: nowrap; font-family: inherit;
+}
+
 footer { border-top: 3px solid var(--ink); padding: 34px 24px 40px; background: var(--bg-alt); }
 .foot-inner { max-width: 1180px; margin: 0 auto; display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; align-items: center; }
 .foot-inner p { color: var(--ink-soft); font-size: 0.88rem; margin: 0; }

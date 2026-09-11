@@ -111,12 +111,5 @@
 
 <script src="js/vendor/supabase.umd.js"></script>
 <script type="module" src="js/catalog.js"></script>
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
-    });
-  }
-</script>
 </body>
 </html>

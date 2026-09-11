@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemus-shell-v4';
+const CACHE_NAME = 'lemus-shell-v5';
 
 const SHELL_URLS = [
   '/index.html',
@@ -12,6 +12,7 @@ const SHELL_URLS = [
   '/js/catalog.js',
   '/js/config.js',
   '/js/icons.js',
+  '/js/pwa-update.js',
   '/js/supabase-client.js',
   '/js/theme.js',
   '/js/vendor/supabase.umd.js',

@@ -1,6 +1,9 @@
 import { supabase, fmt } from './supabase-client.js';
 import { loadProductLines, loadCategories, loadSiteSettings } from './catalog-data.js';
 import { initThemeToggle } from './theme.js';
+import { registerServiceWorkerWithUpdatePrompt } from './pwa-update.js';
+
+registerServiceWorkerWithUpdatePrompt();
 
 let LINES = [];
 let CATEGORIES = [];

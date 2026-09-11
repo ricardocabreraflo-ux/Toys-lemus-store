@@ -2,6 +2,9 @@ import { supabase, fmt } from './supabase-client.js';
 import { loadProductLines, loadCategories, loadActivePromotions, loadUpcomingPromotions, loadSiteSettings, discountedPrice, accentFor, iconKeyFor } from './catalog-data.js';
 import { iconSvg } from './icons.js';
 import { applyAutoTheme } from './theme.js';
+import { registerServiceWorkerWithUpdatePrompt } from './pwa-update.js';
+
+registerServiceWorkerWithUpdatePrompt();
 
 let PRODUCTS = [];
 let LINES = [];
