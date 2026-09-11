@@ -1,5 +1,5 @@
 import { supabase, fmt } from './supabase-client.js';
-import { loadProductLines, loadCategories, loadSubcategories, loadSiteSettings } from './catalog-data.js';
+import { loadProductLines, loadCategories, loadSubcategories, loadSizes, loadSiteSettings } from './catalog-data.js';
 import { initThemeToggle } from './theme.js';
 import { registerServiceWorkerWithUpdatePrompt } from './pwa-update.js';
 
@@ -8,6 +8,7 @@ registerServiceWorkerWithUpdatePrompt();
 let LINES = [];
 let CATEGORIES = [];
 let SUBCATEGORIES = [];
+let SIZES = [];
 let PRODUCTS = [];
 let PROMOTIONS = [];
 let TRANSFERS = [];
@@ -18,6 +19,7 @@ let lineFilter = 'all';
 let catFilter = 'all';
 let subcatFilter = 'all';
 let publishedOnly = false;
+let sortBy = 'name'; // 'name' | 'code'
 let CURRENT_ROLE = null; // 'admin' | 'vendedor'
 let SITE_SETTINGS = { show_products_stat: false };
 let SECURITY_SETTINGS = { delete_pin: '0000' };
@@ -50,6 +52,8 @@ const catById = (id) => CATEGORIES.find(c => c.id === id);
 const catsForLine = (lineId) => CATEGORIES.filter(c => c.product_line_id === lineId);
 const subcatById = (id) => SUBCATEGORIES.find(s => s.id === id);
 const subcatsForCategory = (categoryId) => SUBCATEGORIES.filter(s => s.category_id === categoryId);
+const sizeById = (id) => SIZES.find(s => s.id === id);
+const sizesForSubcategory = (subcategoryId) => SIZES.filter(s => s.subcategory_id === subcategoryId);
 const productById = (id) => PRODUCTS.find(p => p.id === id);
 
 function showToast(msg, isError) {
@@ -289,6 +293,18 @@ function optionsForSubcategories(selectEl, categoryId, { placeholder } = {}) {
     subs.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
 }
 
+function optionsForSizes(selectEl, subcategoryId, { placeholder } = {}) {
+  const szs = subcategoryId ? sizesForSubcategory(subcategoryId) : SIZES;
+  selectEl.innerHTML = (placeholder ? `<option value="all">${placeholder}</option>` : '<option value="">Sin talla</option>') +
+    szs.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+}
+
+// Clave, Código de barras y SKU/Modelo son los 3 identificadores usados para
+// vender un producto (buscar, escanear); cualquiera de los tres debe encontrarlo.
+function matchByIdentifier(p, q) {
+  return (p.barcode || '').toLowerCase() === q || (p.code || '').toLowerCase() === q || (p.sku || '').toLowerCase() === q;
+}
+
 // ---------- Stats ----------
 
 function startOfWeek(d) {
@@ -374,14 +390,21 @@ function initInventoryForm() {
   const lineSel = document.getElementById('new-line');
   const catSel = document.getElementById('new-category');
   const subSel = document.getElementById('new-subcategory');
+  const sizeSel = document.getElementById('new-size');
   optionsForLines(lineSel);
   optionsForCategories(catSel, lineSel.value);
   optionsForSubcategories(subSel, catSel.value);
+  optionsForSizes(sizeSel, subSel.value);
   lineSel.addEventListener('change', () => {
     optionsForCategories(catSel, lineSel.value);
     optionsForSubcategories(subSel, catSel.value);
+    optionsForSizes(sizeSel, subSel.value);
   });
-  catSel.addEventListener('change', () => optionsForSubcategories(subSel, catSel.value));
+  catSel.addEventListener('change', () => {
+    optionsForSubcategories(subSel, catSel.value);
+    optionsForSizes(sizeSel, subSel.value);
+  });
+  subSel.addEventListener('change', () => optionsForSizes(sizeSel, subSel.value));
 }
 
 function initInventoryFilters() {
@@ -414,15 +437,25 @@ function matchesFilters(p) {
   const subcatOk = subcatFilter === 'all' || p.subcategory_id === subcatFilter;
   const pubOk = !publishedOnly || p.published_online;
   const q = query.trim().toLowerCase();
-  const qOk = !q || p.name.toLowerCase().includes(q) || (p.code || '').toLowerCase().includes(q) || (p.barcode || '').toLowerCase().includes(q);
+  const qOk = !q || p.name.toLowerCase().includes(q) || (p.code || '').toLowerCase().includes(q) || (p.barcode || '').toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q);
   return lineOk && catOk && subcatOk && pubOk && qOk;
+}
+
+function sortedFilteredProducts() {
+  const filtered = PRODUCTS.filter(matchesFilters);
+  if (sortBy === 'code') {
+    filtered.sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' }));
+  }
+  return filtered;
 }
 
 // Costo is deliberately never in this list — it's sensitive data and
 // must never be exportable via this feature, by design (see the spec).
 const EXPORT_COLUMNS = [
   { key: 'line_cat', label: 'Línea / Categoría', render: p => `${escapeHtml(lineById(p.product_line_id)?.name || '')} — ${escapeHtml(catById(p.category_id)?.name || '')}` },
-  { key: 'code', label: 'Código', render: p => escapeHtml(p.code || '') },
+  { key: 'code', label: 'Clave', render: p => escapeHtml(p.code || '') },
+  { key: 'barcode', label: 'Código de barras', render: p => escapeHtml(p.barcode || '') },
+  { key: 'sku', label: 'SKU / Modelo', render: p => escapeHtml(p.sku || '') },
   { key: 'price', label: 'Precio', render: p => fmt.format(p.price) },
   { key: 'stock_online', label: 'Stock online', render: p => String(p.stock_online) },
   { key: 'stock_fisica', label: 'Stock física', render: p => String(p.stock_fisica) },
@@ -437,7 +470,7 @@ document.getElementById('export-pdf-btn').addEventListener('click', () => {
 document.getElementById('export-pdf-generate').addEventListener('click', () => {
   const selectedKeys = Array.from(document.querySelectorAll('.export-col:checked')).map(cb => cb.dataset.col);
   const columns = EXPORT_COLUMNS.filter(c => selectedKeys.includes(c.key));
-  const filtered = PRODUCTS.filter(matchesFilters);
+  const filtered = sortedFilteredProducts();
 
   const headerCells = ['Nombre', ...columns.map(c => c.label)]
     .map(h => `<th>${escapeHtml(h)}</th>`).join('');
@@ -458,14 +491,18 @@ document.getElementById('export-pdf-generate').addEventListener('click', () => {
 function lineCategoryCellHtml(p, dis) {
   const cats = catsForLine(p.product_line_id);
   const subs = subcatsForCategory(p.category_id);
+  const sizes = sizesForSubcategory(p.subcategory_id);
   const lineOpts = LINES.map(l => `<option value="${l.id}" ${l.id === p.product_line_id ? 'selected' : ''}>${escapeHtml(l.name)}</option>`).join('');
   const catOpts = cats.map(c => `<option value="${c.id}" ${c.id === p.category_id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
   const subOpts = `<option value="">Sin subcategoría</option>` +
     subs.map(s => `<option value="${s.id}" ${s.id === p.subcategory_id ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
+  const sizeOpts = `<option value="">Sin talla</option>` +
+    sizes.map(s => `<option value="${s.id}" ${s.id === p.size_id ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
   return `
     <select class="cell-input" data-field="product_line_id" style="margin-bottom:4px;" ${dis}>${lineOpts}</select>
     <select class="cell-input" data-field="category_id" style="margin-bottom:4px;" ${dis}>${catOpts}</select>
-    <select class="cell-input" data-field="subcategory_id" ${dis}>${subOpts}</select>`;
+    <select class="cell-input" data-field="subcategory_id" style="margin-bottom:4px;" ${dis}>${subOpts}</select>
+    <select class="cell-input" data-field="size_id" ${dis}>${sizeOpts}</select>`;
 }
 
 function rowHtml(p) {
@@ -477,7 +514,8 @@ function rowHtml(p) {
       <td style="min-width:180px;">${lineCategoryCellHtml(p, dis)}</td>
       <td style="min-width:120px;">
         <input class="cell-input" data-field="code" value="${p.code ? escapeHtml(p.code) : ''}" placeholder="Clave" style="margin-bottom:4px;" ${dis}>
-        <input class="cell-input" data-field="barcode" value="${p.barcode ? escapeHtml(p.barcode) : ''}" placeholder="Código de barras" ${dis}>
+        <input class="cell-input" data-field="barcode" value="${p.barcode ? escapeHtml(p.barcode) : ''}" placeholder="Código de barras" style="margin-bottom:4px;" ${dis}>
+        <input class="cell-input" data-field="sku" value="${p.sku ? escapeHtml(p.sku) : ''}" placeholder="SKU / Modelo" ${dis}>
       </td>
       <td><input class="cell-input name-input" data-field="name" value="${escapeHtml(p.name)}" ${dis}></td>
       ${CURRENT_ROLE === 'admin' ? `<td><input class="cell-input" data-field="cost_price" type="number" min="0" step="0.01" value="${p.cost_price}"></td>` : ''}
@@ -504,7 +542,7 @@ function renderTable() {
   const focusedId = focusedRow ? focusedRow.dataset.id : null;
   const focusedField = focused && focused.dataset ? focused.dataset.field : null;
 
-  const filtered = PRODUCTS.filter(matchesFilters);
+  const filtered = sortedFilteredProducts();
   document.getElementById('admin-count').textContent = filtered.length + (filtered.length === 1 ? ' producto' : ' productos');
   tbody.innerHTML = filtered.map(rowHtml).join('');
 
@@ -512,20 +550,30 @@ function renderTable() {
     const lineSel = row.querySelector('[data-field="product_line_id"]');
     const catSel = row.querySelector('[data-field="category_id"]');
     const subSel = row.querySelector('[data-field="subcategory_id"]');
+    const sizeSel = row.querySelector('[data-field="size_id"]');
     lineSel.addEventListener('change', async () => {
       const cats = catsForLine(lineSel.value);
       catSel.innerHTML = cats.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
       optionsForSubcategories(subSel, catSel.value);
+      optionsForSizes(sizeSel, subSel.value);
       await saveField(row, 'product_line_id', lineSel.value);
       await saveField(row, 'category_id', catSel.value);
       await saveField(row, 'subcategory_id', subSel.value || null);
+      await saveField(row, 'size_id', sizeSel.value || null);
     });
     catSel.addEventListener('change', async () => {
       optionsForSubcategories(subSel, catSel.value);
+      optionsForSizes(sizeSel, subSel.value);
       await saveField(row, 'category_id', catSel.value);
       await saveField(row, 'subcategory_id', subSel.value || null);
+      await saveField(row, 'size_id', sizeSel.value || null);
     });
-    subSel.addEventListener('change', () => saveField(row, 'subcategory_id', subSel.value || null));
+    subSel.addEventListener('change', async () => {
+      optionsForSizes(sizeSel, subSel.value);
+      await saveField(row, 'subcategory_id', subSel.value || null);
+      await saveField(row, 'size_id', sizeSel.value || null);
+    });
+    sizeSel.addEventListener('change', () => saveField(row, 'size_id', sizeSel.value || null));
 
     row.querySelectorAll('input[data-field]').forEach(input => {
       if (input.type === 'checkbox') {
@@ -587,10 +635,12 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const code = document.getElementById('new-code').value.trim();
   const barcode = document.getElementById('new-barcode').value.trim();
+  const sku = document.getElementById('new-sku').value.trim();
   const name = document.getElementById('new-name').value.trim();
   const product_line_id = document.getElementById('new-line').value;
   const category_id = document.getElementById('new-category').value;
   const subcategory_id = document.getElementById('new-subcategory').value || null;
+  const size_id = document.getElementById('new-size').value || null;
   const cost_price = Math.max(0, Number(document.getElementById('new-cost').value) || 0);
   const price = Math.max(0, Number(document.getElementById('new-price').value) || 0);
   const suggestedRaw = document.getElementById('new-suggested-price').value;
@@ -602,10 +652,10 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
 
   const { data, error } = await supabase.from('products')
     .insert({
-      code, barcode: barcode || null, name, product_line_id, category_id, subcategory_id,
+      code, barcode: barcode || null, sku: sku || null, name, product_line_id, category_id, subcategory_id, size_id,
       cost_price, price, suggested_price, stock_online, stock_fisica, published_online,
     })
-    .select('id, code, barcode, name, product_line_id, category_id, subcategory_id, price, stock_online, stock_fisica, published_online, created_at, updated_at')
+    .select('id, code, barcode, sku, name, product_line_id, category_id, subcategory_id, size_id, price, stock_online, stock_fisica, published_online, created_at, updated_at')
     .single();
   if (error) { showToast('No se pudo agregar el producto', true); console.error(error); return; }
   PRODUCTS.push({ ...data, cost_price, suggested_price });
@@ -618,6 +668,8 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
   document.getElementById('new-stock-online').value = 0;
   document.getElementById('new-stock-fisica').value = 0;
 });
+
+document.getElementById('admin-sort').addEventListener('change', (e) => { sortBy = e.target.value; renderTable(); });
 
 document.getElementById('admin-search').addEventListener('input', (e) => { query = e.target.value; renderTable(); });
 document.getElementById('admin-published-filter').addEventListener('change', (e) => { publishedOnly = e.target.checked; renderTable(); });
@@ -829,7 +881,7 @@ document.getElementById('sell-search').addEventListener('input', (e) => {
   const list = document.getElementById('sell-suggestions');
   if (!q) { list.hidden = true; list.innerHTML = ''; return; }
 
-  const exact = PRODUCTS.find(p => (p.barcode || '').toLowerCase() === q || (p.code || '').toLowerCase() === q);
+  const exact = PRODUCTS.find(p => matchByIdentifier(p, q));
   const ambiguous = exact && PRODUCTS.some(p => {
     const c = (p.code || '').toLowerCase();
     return c !== q && c.startsWith(q);
@@ -849,7 +901,7 @@ document.getElementById('sell-search').addEventListener('keydown', (e) => {
   const raw = e.target.value.trim();
   if (!raw) return;
   const list = document.getElementById('sell-suggestions');
-  const exactOnEnter = PRODUCTS.find(p => (p.barcode || '').toLowerCase() === raw.toLowerCase() || (p.code || '').toLowerCase() === raw.toLowerCase());
+  const exactOnEnter = PRODUCTS.find(p => matchByIdentifier(p, raw.toLowerCase()));
   if (exactOnEnter) {
     addToSellCart(exactOnEnter.id);
     e.target.value = '';
@@ -901,7 +953,7 @@ function applySellSaleModeVisibility() {
 
 function handleSellScanValue(raw) {
   const q = raw.trim().toLowerCase();
-  const match = PRODUCTS.find(p => (p.barcode || '').toLowerCase() === q || (p.code || '').toLowerCase() === q);
+  const match = PRODUCTS.find(p => matchByIdentifier(p, q));
   if (match) { addToSellCart(match.id); return; }
   showToast('Producto no encontrado', true);
 }
@@ -1552,7 +1604,7 @@ document.getElementById('count-search').addEventListener('input', (e) => {
   const list = document.getElementById('count-suggestions');
   if (!q) { list.hidden = true; list.innerHTML = ''; return; }
 
-  const exact = PRODUCTS.find(p => (p.barcode || '').toLowerCase() === q || (p.code || '').toLowerCase() === q);
+  const exact = PRODUCTS.find(p => matchByIdentifier(p, q));
   const ambiguous = exact && PRODUCTS.some(p => {
     const c = (p.code || '').toLowerCase();
     return c !== q && c.startsWith(q);
@@ -1572,7 +1624,7 @@ document.getElementById('count-search').addEventListener('keydown', (e) => {
   const raw = e.target.value.trim();
   if (!raw) return;
   const list = document.getElementById('count-suggestions');
-  const exactOnEnter = PRODUCTS.find(p => (p.barcode || '').toLowerCase() === raw.toLowerCase() || (p.code || '').toLowerCase() === raw.toLowerCase());
+  const exactOnEnter = PRODUCTS.find(p => matchByIdentifier(p, raw.toLowerCase()));
   if (exactOnEnter) {
     addToCount(exactOnEnter.id);
     e.target.value = '';
@@ -1700,7 +1752,7 @@ if ('BarcodeDetector' in window) {
 
 function handleCountScanValue(raw) {
   const q = raw.trim().toLowerCase();
-  const match = PRODUCTS.find(p => (p.barcode || '').toLowerCase() === q || (p.code || '').toLowerCase() === q);
+  const match = PRODUCTS.find(p => matchByIdentifier(p, q));
   if (match) { addToCount(match.id); return; }
   showToast('Producto no encontrado', true);
 }
@@ -2041,6 +2093,31 @@ document.getElementById('subcategory-form').addEventListener('submit', async (e)
   showToast(`Subcategoría "${name}" agregada`);
 });
 
+document.getElementById('size-line').addEventListener('change', () => {
+  optionsForCategories(document.getElementById('size-category'), document.getElementById('size-line').value);
+  optionsForSubcategories(document.getElementById('size-subcategory'), document.getElementById('size-category').value, { placeholder: 'Selecciona una subcategoría' });
+});
+document.getElementById('size-category').addEventListener('change', () => {
+  optionsForSubcategories(document.getElementById('size-subcategory'), document.getElementById('size-category').value, { placeholder: 'Selecciona una subcategoría' });
+});
+
+document.getElementById('size-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const subSel = document.getElementById('size-subcategory');
+  const input = document.getElementById('size-name');
+  const name = input.value.trim();
+  const subcategory_id = subSel.value;
+  if (!name || !subcategory_id || subcategory_id === 'all') return;
+  const { data, error } = await supabase.from('sizes')
+    .insert({ subcategory_id, name, sort_order: sizesForSubcategory(subcategory_id).length })
+    .select().single();
+  if (error) { showToast('No se pudo agregar la talla', true); console.error(error); return; }
+  SIZES.push(data);
+  refreshAllLineDependentUI();
+  input.value = '';
+  showToast(`Talla "${name}" agregada`);
+});
+
 function renderTaxonomy() {
   document.getElementById('lines-tbody').innerHTML = LINES.map(l => `
     <tr data-id="${l.id}">
@@ -2104,6 +2181,32 @@ function renderTaxonomy() {
       refreshAllLineDependentUI();
     });
   });
+
+  document.getElementById('sizes-tbody').innerHTML = SIZES.map(sz => {
+    const sub = subcatById(sz.subcategory_id);
+    const cat = sub ? catById(sub.category_id) : null;
+    return `
+    <tr data-id="${sz.id}">
+      <td>${escapeHtml(lineById(cat?.product_line_id)?.name || '')}</td>
+      <td>${escapeHtml(cat?.name || '')}</td>
+      <td>${escapeHtml(sub?.name || '')}</td>
+      <td>${escapeHtml(sz.name)}</td>
+      <td><button class="icon-mini danger" data-role="size-delete" type="button" aria-label="Eliminar ${escapeHtml(sz.name)}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+      </button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('sizes-tbody').querySelectorAll('[data-role="size-delete"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('tr').dataset.id;
+      const sz = sizeById(id);
+      if (!confirm(`¿Eliminar la talla "${sz.name}"? Solo se puede si no tiene productos.`)) return;
+      const { error } = await supabase.from('sizes').delete().eq('id', id);
+      if (error) { showToast('No se pudo eliminar: revisa que no tenga productos', true); return; }
+      SIZES = SIZES.filter(s => s.id !== id);
+      refreshAllLineDependentUI();
+    });
+  });
 }
 
 // ---------- Settings tab ----------
@@ -2148,12 +2251,16 @@ function refreshAllLineDependentUI() {
   optionsForLines(document.getElementById('new-line'));
   optionsForCategories(document.getElementById('new-category'), document.getElementById('new-line').value);
   optionsForSubcategories(document.getElementById('new-subcategory'), document.getElementById('new-category').value);
+  optionsForSizes(document.getElementById('new-size'), document.getElementById('new-subcategory').value);
   optionsForLines(document.getElementById('admin-line-filter'), { placeholder: 'Todas las líneas' });
   optionsForCategories(document.getElementById('admin-cat-filter'), lineFilter === 'all' ? null : lineFilter, { placeholder: 'Todas las categorías' });
   optionsForSubcategories(document.getElementById('admin-subcat-filter'), catFilter === 'all' ? null : catFilter, { placeholder: 'Todas las subcategorías' });
   optionsForLines(document.getElementById('cat-line'));
   optionsForLines(document.getElementById('subcat-line'));
   optionsForCategories(document.getElementById('subcat-category'), document.getElementById('subcat-line').value);
+  optionsForLines(document.getElementById('size-line'));
+  optionsForCategories(document.getElementById('size-category'), document.getElementById('size-line').value);
+  optionsForSubcategories(document.getElementById('size-subcategory'), document.getElementById('size-category').value, { placeholder: 'Selecciona una subcategoría' });
   refreshPromoScopeTarget();
   renderTaxonomy();
   renderTable();
@@ -2511,10 +2618,11 @@ async function reloadProducts() {
 
 async function loadEverything() {
   try {
-    const [lines, cats, subcats] = await Promise.all([loadProductLines(), loadCategories(), loadSubcategories()]);
+    const [lines, cats, subcats, sizes] = await Promise.all([loadProductLines(), loadCategories(), loadSubcategories(), loadSizes()]);
     LINES = lines;
     CATEGORIES = cats;
     SUBCATEGORIES = subcats;
+    SIZES = sizes;
     try {
       SITE_SETTINGS = await loadSiteSettings();
     } catch (err) {
@@ -2546,6 +2654,9 @@ async function loadEverything() {
     optionsForLines(document.getElementById('cat-line'));
     optionsForLines(document.getElementById('subcat-line'));
     optionsForCategories(document.getElementById('subcat-category'), document.getElementById('subcat-line').value);
+    optionsForLines(document.getElementById('size-line'));
+    optionsForCategories(document.getElementById('size-category'), document.getElementById('size-line').value);
+    optionsForSubcategories(document.getElementById('size-subcategory'), document.getElementById('size-category').value, { placeholder: 'Selecciona una subcategoría' });
     refreshTransferProductOptions();
     refreshLayawayProductOptions();
 
@@ -2582,6 +2693,8 @@ function subscribeRealtime() {
     .channel('admin:all')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, scheduleReload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'subcategories' }, scheduleReload)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'sizes' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'product_lines' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, scheduleReload)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, scheduleReload)

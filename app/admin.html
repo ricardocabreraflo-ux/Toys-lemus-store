@@ -197,12 +197,20 @@
         <select class="cell-input" id="new-subcategory"></select>
       </div>
       <div class="field">
+        <label for="new-size">Talla</label>
+        <select class="cell-input" id="new-size"><option value="">Sin talla</option></select>
+      </div>
+      <div class="field">
         <label for="new-code">Clave</label>
         <input class="cell-input" id="new-code" type="text" placeholder="Opcional">
       </div>
       <div class="field">
         <label for="new-barcode">Código de barras</label>
         <input class="cell-input" id="new-barcode" type="text" placeholder="Opcional, para escanear">
+      </div>
+      <div class="field">
+        <label for="new-sku">SKU / Modelo</label>
+        <input class="cell-input" id="new-sku" type="text" placeholder="Opcional">
       </div>
       <div class="field" style="grid-column: span 2;">
         <label for="new-name">Nombre</label>
@@ -252,6 +260,10 @@
       <select class="cell-input" id="admin-subcat-filter" style="max-width:200px;border-color:var(--line);background:var(--panel);">
         <option value="all">Todas las subcategorías</option>
       </select>
+      <select class="cell-input" id="admin-sort" style="max-width:180px;border-color:var(--line);background:var(--panel);">
+        <option value="name">Ordenar por nombre</option>
+        <option value="code">Ordenar por clave</option>
+      </select>
       <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;color:var(--ink-soft);">
         <input type="checkbox" id="admin-published-filter" style="width:auto;"> Solo publicados
       </label>
@@ -264,7 +276,13 @@
         <input type="checkbox" class="export-col" data-col="line_cat" checked style="width:auto;"> Línea / Categoría
       </label>
       <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
-        <input type="checkbox" class="export-col" data-col="code" checked style="width:auto;"> Código
+        <input type="checkbox" class="export-col" data-col="code" checked style="width:auto;"> Clave
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
+        <input type="checkbox" class="export-col" data-col="barcode" checked style="width:auto;"> Código de barras
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
+        <input type="checkbox" class="export-col" data-col="sku" checked style="width:auto;"> SKU / Modelo
       </label>
       <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;">
         <input type="checkbox" class="export-col" data-col="price" checked style="width:auto;"> Precio
@@ -285,8 +303,8 @@
       <table class="admin-table">
         <thead>
           <tr>
-            <th>Línea / Categoría / Subcategoría</th>
-            <th>Clave / Código de barras</th>
+            <th>Línea / Categoría / Subcategoría / Talla</th>
+            <th>Clave / Código de barras / SKU</th>
             <th>Nombre</th>
             <th id="col-cost-header">Costo</th>
             <th>Precio</th>
@@ -686,10 +704,37 @@
       </div>
       <div class="submit-cell"><button class="btn btn-primary btn-sm" type="submit">Agregar</button></div>
     </form>
-    <div class="table-wrap">
+    <div class="table-wrap" style="margin-bottom:32px;">
       <table class="admin-table">
         <thead><tr><th>Línea</th><th>Categoría</th><th>Subcategoría</th><th></th></tr></thead>
         <tbody id="subcategories-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="grid-head"><h2>Tallas</h2></div>
+    <form class="add-form" id="size-form">
+      <div class="field">
+        <label for="size-line">Línea</label>
+        <select class="cell-input" id="size-line" required></select>
+      </div>
+      <div class="field">
+        <label for="size-category">Categoría</label>
+        <select class="cell-input" id="size-category" required></select>
+      </div>
+      <div class="field">
+        <label for="size-subcategory">Subcategoría</label>
+        <select class="cell-input" id="size-subcategory" required></select>
+      </div>
+      <div class="field">
+        <label for="size-name">Nueva talla</label>
+        <input class="cell-input" id="size-name" type="text" placeholder="Ej. M" required>
+      </div>
+      <div class="submit-cell"><button class="btn btn-primary btn-sm" type="submit">Agregar</button></div>
+    </form>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Línea</th><th>Categoría</th><th>Subcategoría</th><th>Talla</th><th></th></tr></thead>
+        <tbody id="sizes-tbody"></tbody>
       </table>
     </div>
   </section>
