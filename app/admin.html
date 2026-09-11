@@ -291,17 +291,19 @@
   <section class="tab-panel" id="tab-sell" hidden>
 
     <div id="sell-home">
-      <div class="grid-head"><h2>Tu tienda hoy</h2></div>
-      <div class="stat-row" id="sell-today-stats">
-        <div class="stat-tile"><strong>—</strong><span>Vendido hoy</span></div>
-        <div class="stat-tile"><strong>—</strong><span>Ticket promedio</span></div>
-        <div class="stat-tile"><strong>—</strong><span>Piezas vendidas hoy</span></div>
-        <div class="stat-tile"><strong>—</strong><span>Ventas del día</span></div>
+      <div class="sell-hero">
+        <div class="sell-hero-label">Tu tienda hoy</div>
+        <div class="sell-hero-stats" id="sell-today-stats">
+          <div class="sell-hero-stat"><strong>—</strong><span>Vendido hoy</span></div>
+          <div class="sell-hero-stat"><strong>—</strong><span>Ticket promedio</span></div>
+          <div class="sell-hero-stat"><strong>—</strong><span>Piezas vendidas hoy</span></div>
+          <div class="sell-hero-stat"><strong>—</strong><span>Ventas del día</span></div>
+        </div>
       </div>
-      <button class="btn btn-primary" type="button" id="sell-start-btn" style="margin:8px 0 20px;">Registrar venta</button>
+      <button class="btn btn-primary" type="button" id="sell-start-btn" style="margin:0 0 20px;">🛒 Registrar venta</button>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="btn btn-ghost btn-sm" type="button" id="sell-goto-history-btn">Historial</button>
-        <button class="btn btn-ghost btn-sm" type="button" id="sell-goto-layaways-btn">Apartados</button>
+        <button class="btn btn-ghost btn-sm" type="button" id="sell-goto-history-btn">🕐 Historial</button>
+        <button class="btn btn-ghost btn-sm" type="button" id="sell-goto-layaways-btn">📅 Apartados</button>
       </div>
     </div>
 
@@ -314,17 +316,17 @@
         </button>
       </div>
       <button class="sell-sheet-option" type="button" id="sell-option-products" style="--c: var(--accent);">
-        <span class="opt-icon"><svg viewBox="0 0 24 24"><use href="#i-cart"/></svg></span>
+        <span class="opt-icon">🛒</span>
         <span class="opt-body"><strong>Venta de productos</strong><span>Busca o escanea del catálogo</span></span>
         <svg class="opt-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
       </button>
       <button class="sell-sheet-option" type="button" id="sell-option-free" style="--c: var(--accent-3);">
-        <span class="opt-icon"><svg viewBox="0 0 24 24"><use href="#i-wallet"/></svg></span>
+        <span class="opt-icon">💵</span>
         <span class="opt-body"><strong>Venta libre</strong><span>Un monto, sin producto del catálogo</span></span>
         <svg class="opt-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
       </button>
       <button class="sell-sheet-option" type="button" id="sell-option-layaway" style="--c: var(--accent-5);">
-        <span class="opt-icon"><svg viewBox="0 0 24 24"><use href="#i-clock"/></svg></span>
+        <span class="opt-icon">📅</span>
         <span class="opt-body"><strong>Apartado</strong><span>Anticipo y fecha de entrega</span></span>
         <svg class="opt-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
       </button>

@@ -748,14 +748,14 @@ function renderSellHome() {
   const avgTicket = VENDER_TODAY.count > 0 ? VENDER_TODAY.total / VENDER_TODAY.count : null;
   if (isAdmin) {
     statsEl.innerHTML = `
-      <div class="stat-tile"><strong>${VENDER_TODAY.total === null ? '—' : fmt.format(VENDER_TODAY.total)}</strong><span>Vendido hoy</span></div>
-      <div class="stat-tile"><strong>${avgTicket === null ? '—' : fmt.format(avgTicket)}</strong><span>Ticket promedio</span></div>
-      <div class="stat-tile"><strong>${VENDER_TODAY.pieces === null ? '—' : VENDER_TODAY.pieces}</strong><span>Piezas vendidas hoy</span></div>
-      <div class="stat-tile"><strong>${VENDER_TODAY.count === null ? '—' : VENDER_TODAY.count}</strong><span>Ventas del día</span></div>`;
+      <div class="sell-hero-stat"><strong>${VENDER_TODAY.total === null ? '—' : fmt.format(VENDER_TODAY.total)}</strong><span>Vendido hoy</span></div>
+      <div class="sell-hero-stat"><strong>${avgTicket === null ? '—' : fmt.format(avgTicket)}</strong><span>Ticket promedio</span></div>
+      <div class="sell-hero-stat"><strong>${VENDER_TODAY.pieces === null ? '—' : VENDER_TODAY.pieces}</strong><span>Piezas vendidas hoy</span></div>
+      <div class="sell-hero-stat"><strong>${VENDER_TODAY.count === null ? '—' : VENDER_TODAY.count}</strong><span>Ventas del día</span></div>`;
   } else {
     statsEl.innerHTML = `
-      <div class="stat-tile"><strong>${VENDER_TODAY.pieces === null ? '—' : VENDER_TODAY.pieces}</strong><span>Piezas vendidas hoy</span></div>
-      <div class="stat-tile"><strong>${VENDER_TODAY.count === null ? '—' : VENDER_TODAY.count}</strong><span>Ventas del día</span></div>`;
+      <div class="sell-hero-stat"><strong>${VENDER_TODAY.pieces === null ? '—' : VENDER_TODAY.pieces}</strong><span>Piezas vendidas hoy</span></div>
+      <div class="sell-hero-stat"><strong>${VENDER_TODAY.count === null ? '—' : VENDER_TODAY.count}</strong><span>Ventas del día</span></div>`;
   }
 }
 

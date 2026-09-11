@@ -311,13 +311,25 @@ footer { border-top: 3px solid var(--ink); padding: 34px 24px 40px; background: 
 .sell-sheet-option:hover, .sell-sheet-option:focus-visible { background: var(--bg-alt); outline: none; }
 .sell-sheet-option .opt-icon {
   width: 48px; height: 48px; border-radius: 14px; flex: none; display: grid; place-items: center;
-  background: color-mix(in srgb, var(--c, var(--accent)) 22%, var(--bg));
+  background: color-mix(in srgb, var(--c, var(--accent)) 22%, var(--bg)); font-size: 22px; line-height: 1;
 }
-.sell-sheet-option .opt-icon svg { width: 24px; height: 24px; stroke: var(--c, var(--accent)); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .sell-sheet-option .opt-body { flex: 1; min-width: 0; }
 .sell-sheet-option .opt-body strong { display: block; font-family: 'Baloo 2'; font-size: 1rem; }
 .sell-sheet-option .opt-body span { display: block; font-size: 0.82rem; color: var(--ink-soft); margin-top: 2px; }
 .sell-sheet-option .opt-chevron { flex: none; width: 20px; height: 20px; color: var(--ink-soft); stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.sell-hero {
+  border-radius: 18px; padding: 20px 22px; margin-bottom: 20px; position: relative; overflow: hidden;
+  background: var(--ink); color: var(--bg);
+}
+.sell-hero::after {
+  content: ""; position: absolute; right: -30px; top: -30px; width: 150px; height: 150px; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 55%, transparent), transparent 70%);
+}
+.sell-hero-label { font-size: 0.82rem; opacity: 0.7; margin-bottom: 8px; position: relative; z-index: 1; }
+.sell-hero-stats { display: flex; flex-wrap: wrap; gap: 18px 28px; position: relative; z-index: 1; }
+.sell-hero-stat strong { display: block; font-family: 'Baloo 2'; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.sell-hero-stat span { font-size: 0.76rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; }
 
 @media (max-width: 640px) {
   .admin-shell { flex-direction: column; padding: 16px 16px 104px; gap: 0; }
