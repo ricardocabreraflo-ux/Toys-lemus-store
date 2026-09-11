@@ -1,5 +1,23 @@
 # Rediseño de "Vender" — punto de venta
 
+## Enmienda (después de ver la primera versión en vivo)
+
+Al ver la primera versión ya publicada, Ricardo pidió recuperar la hoja de
+opciones de Treinta que se había descartado durante el diseño original (ver
+Contexto): al presionar **"Registrar venta"** ahora se abre una hoja (la
+misma que ya usa "Más" en la navegación) con tres opciones — **Venta de
+productos**, **Venta libre**, **Apartado** — en vez de ir directo al
+buscador. Elegir "Venta de productos" lleva a la pantalla con buscador y
+escaneo de cámara (sin línea libre). Elegir "Venta libre" lleva a esa misma
+pantalla pero mostrando solo el formulario de descripción + monto (sin
+buscador ni cámara) — ambas comparten el mismo carrito y el mismo "Cobrar".
+Elegir "Apartado" abre la pestaña Apartados que ya existe, igual que el
+acceso rápido de la pantalla de inicio. El resto de este documento (Alcance,
+Diseño, Manejo de errores, Pruebas) describe la versión anterior a esta
+enmienda — donde dice "una sola pantalla mezclada" para Venta de
+productos/Venta libre, ahora son dos modos de la misma pantalla, elegidos
+desde la hoja.
+
 ## Contexto
 
 La pestaña **Vender** de hoy es un formulario simple: eliges un producto de

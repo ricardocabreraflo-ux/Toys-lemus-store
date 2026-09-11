@@ -590,13 +590,6 @@ function addToSellCart(productId) {
   renderSellCart();
 }
 
-document.getElementById('sell-free-toggle-btn').addEventListener('click', () => {
-  const form = document.getElementById('sell-free-form');
-  form.hidden = !form.hidden;
-  document.getElementById('sell-free-error').textContent = '';
-  if (!form.hidden) document.getElementById('sell-free-desc').focus();
-});
-
 document.getElementById('sell-free-add-btn').addEventListener('click', () => {
   const descEl = document.getElementById('sell-free-desc');
   const amountEl = document.getElementById('sell-free-amount');
@@ -609,7 +602,6 @@ document.getElementById('sell-free-add-btn').addEventListener('click', () => {
   SELL_CART.push({ kind: 'free', description, amount });
   descEl.value = '';
   amountEl.value = '';
-  document.getElementById('sell-free-form').hidden = true;
   renderSellCart();
 });
 
@@ -843,8 +835,16 @@ let lastSellScannedCode = null;
 let lastSellScannedAt = 0;
 let sellCameraGen = 0;
 
-if ('BarcodeDetector' in window) {
-  document.getElementById('sell-camera-btn').hidden = false;
+let sellSaleMode = 'products'; // 'products' | 'free' — which option was chosen in the "Nueva venta" sheet
+const sellCameraSupported = 'BarcodeDetector' in window;
+
+function applySellSaleModeVisibility() {
+  const isProducts = sellSaleMode === 'products';
+  document.getElementById('sell-sale-title').textContent = isProducts ? 'Venta de productos' : 'Venta libre';
+  document.getElementById('sell-search-wrap').hidden = !isProducts;
+  document.getElementById('sell-camera-btn').hidden = !isProducts || !sellCameraSupported;
+  document.getElementById('sell-free-form').hidden = isProducts;
+  if (!isProducts) stopSellCamera();
 }
 
 function handleSellScanValue(raw) {
@@ -946,6 +946,7 @@ function setSellView(view) {
   document.getElementById('sell-sale').hidden = view !== 'sale';
   document.getElementById('sell-sale-confirm').hidden = view !== 'sale-confirm';
   document.getElementById('sell-history').hidden = view !== 'history';
+  if (view === 'sale') applySellSaleModeVisibility();
   if (view !== 'sale') stopSellCamera();
   if (view === 'history') {
     const fromEl = document.getElementById('sell-history-from');
@@ -968,10 +969,35 @@ function resetSellView() {
   document.getElementById('sell-history-from').value = todayDateStr();
   document.getElementById('sell-history-to').value = todayDateStr();
   renderSellCart();
+  closeSellOptionsSheet();
   setSellView('home');
 }
 
-document.getElementById('sell-start-btn').addEventListener('click', () => setSellView('sale'));
+function openSellOptionsSheet() {
+  document.getElementById('sell-options-backdrop').hidden = false;
+  document.getElementById('sell-options-sheet').hidden = false;
+}
+function closeSellOptionsSheet() {
+  document.getElementById('sell-options-backdrop').hidden = true;
+  document.getElementById('sell-options-sheet').hidden = true;
+}
+document.getElementById('sell-start-btn').addEventListener('click', () => openSellOptionsSheet());
+document.getElementById('sell-options-backdrop').addEventListener('click', closeSellOptionsSheet);
+document.getElementById('sell-options-close').addEventListener('click', closeSellOptionsSheet);
+document.getElementById('sell-option-products').addEventListener('click', () => {
+  closeSellOptionsSheet();
+  sellSaleMode = 'products';
+  setSellView('sale');
+});
+document.getElementById('sell-option-free').addEventListener('click', () => {
+  closeSellOptionsSheet();
+  sellSaleMode = 'free';
+  setSellView('sale');
+});
+document.getElementById('sell-option-layaway').addEventListener('click', () => {
+  closeSellOptionsSheet();
+  setActiveTab('layaways');
+});
 document.getElementById('sell-sale-back-btn').addEventListener('click', () => resetSellView());
 document.getElementById('sell-goto-history-btn').addEventListener('click', () => setSellView('history'));
 document.getElementById('sell-goto-layaways-btn').addEventListener('click', () => setActiveTab('layaways'));

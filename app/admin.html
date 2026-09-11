@@ -305,9 +305,28 @@
       </div>
     </div>
 
+    <div class="more-backdrop" id="sell-options-backdrop" hidden></div>
+    <div class="more-sheet" id="sell-options-sheet" hidden role="dialog" aria-label="Nueva venta">
+      <div class="more-sheet-head">
+        <span>Nueva venta</span>
+        <button class="icon-btn" id="sell-options-close" type="button" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <button class="btn btn-ghost" type="button" id="sell-option-products" style="width:100%; justify-content:flex-start; gap:10px; margin-bottom:8px;">
+        <svg class="icon"><use href="#i-cart"/></svg> Venta de productos
+      </button>
+      <button class="btn btn-ghost" type="button" id="sell-option-free" style="width:100%; justify-content:flex-start; gap:10px; margin-bottom:8px;">
+        <svg class="icon"><use href="#i-wallet"/></svg> Venta libre
+      </button>
+      <button class="btn btn-ghost" type="button" id="sell-option-layaway" style="width:100%; justify-content:flex-start; gap:10px;">
+        <svg class="icon"><use href="#i-clock"/></svg> Apartado
+      </button>
+    </div>
+
     <div id="sell-sale" hidden>
       <div class="grid-head">
-        <h2>Nueva venta</h2>
+        <h2 id="sell-sale-title">Venta de productos</h2>
         <button class="btn btn-ghost btn-sm" type="button" id="sell-sale-back-btn">‹ Cancelar</button>
       </div>
 
@@ -318,7 +337,6 @@
       <button class="btn btn-sm" type="button" id="sell-camera-btn" hidden style="margin-top:8px;">Escanear con cámara</button>
       <video id="sell-camera-video" autoplay playsinline muted hidden style="width:100%;max-width:360px;margin-top:8px;border-radius:10px;background:#000;"></video>
 
-      <button class="btn btn-ghost btn-sm" type="button" id="sell-free-toggle-btn" style="margin-top:12px;">+ Agregar línea libre</button>
       <div class="add-form" id="sell-free-form" hidden style="grid-template-columns: 2fr 1fr auto; margin-top:8px;">
         <div class="field">
           <label for="sell-free-desc">Descripción</label>
