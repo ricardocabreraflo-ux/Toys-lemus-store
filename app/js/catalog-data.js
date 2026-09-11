@@ -27,6 +27,12 @@ export async function loadCategories() {
   return data;
 }
 
+export async function loadSubcategories() {
+  const { data, error } = await supabase.from('subcategories').select('*').order('sort_order');
+  if (error) throw error;
+  return data;
+}
+
 export async function loadSiteSettings() {
   const { data, error } = await supabase.from('site_settings').select('*').single();
   if (error) throw error;

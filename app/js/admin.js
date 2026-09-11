@@ -1,5 +1,5 @@
 import { supabase, fmt } from './supabase-client.js';
-import { loadProductLines, loadCategories, loadSiteSettings } from './catalog-data.js';
+import { loadProductLines, loadCategories, loadSubcategories, loadSiteSettings } from './catalog-data.js';
 import { initThemeToggle } from './theme.js';
 import { registerServiceWorkerWithUpdatePrompt } from './pwa-update.js';
 
@@ -7,6 +7,7 @@ registerServiceWorkerWithUpdatePrompt();
 
 let LINES = [];
 let CATEGORIES = [];
+let SUBCATEGORIES = [];
 let PRODUCTS = [];
 let PROMOTIONS = [];
 let TRANSFERS = [];
@@ -15,6 +16,7 @@ let CURRENT_MONTH_MARGIN = 0;
 let query = '';
 let lineFilter = 'all';
 let catFilter = 'all';
+let subcatFilter = 'all';
 let publishedOnly = false;
 let CURRENT_ROLE = null; // 'admin' | 'vendedor'
 let SITE_SETTINGS = { show_products_stat: false };
@@ -46,6 +48,8 @@ let isInviteFlow = (() => {
 const lineById = (id) => LINES.find(l => l.id === id);
 const catById = (id) => CATEGORIES.find(c => c.id === id);
 const catsForLine = (lineId) => CATEGORIES.filter(c => c.product_line_id === lineId);
+const subcatById = (id) => SUBCATEGORIES.find(s => s.id === id);
+const subcatsForCategory = (categoryId) => SUBCATEGORIES.filter(s => s.category_id === categoryId);
 const productById = (id) => PRODUCTS.find(p => p.id === id);
 
 function showToast(msg, isError) {
@@ -279,6 +283,12 @@ function optionsForCategories(selectEl, lineId, { placeholder } = {}) {
     cats.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
 }
 
+function optionsForSubcategories(selectEl, categoryId, { placeholder } = {}) {
+  const subs = categoryId ? subcatsForCategory(categoryId) : SUBCATEGORIES;
+  selectEl.innerHTML = (placeholder ? `<option value="all">${placeholder}</option>` : '<option value="">Sin subcategoría</option>') +
+    subs.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+}
+
 // ---------- Stats ----------
 
 function startOfWeek(d) {
@@ -363,32 +373,49 @@ function renderDashboard() {
 function initInventoryForm() {
   const lineSel = document.getElementById('new-line');
   const catSel = document.getElementById('new-category');
+  const subSel = document.getElementById('new-subcategory');
   optionsForLines(lineSel);
   optionsForCategories(catSel, lineSel.value);
-  lineSel.addEventListener('change', () => optionsForCategories(catSel, lineSel.value));
+  optionsForSubcategories(subSel, catSel.value);
+  lineSel.addEventListener('change', () => {
+    optionsForCategories(catSel, lineSel.value);
+    optionsForSubcategories(subSel, catSel.value);
+  });
+  catSel.addEventListener('change', () => optionsForSubcategories(subSel, catSel.value));
 }
 
 function initInventoryFilters() {
   const lineSel = document.getElementById('admin-line-filter');
   const catSel = document.getElementById('admin-cat-filter');
+  const subSel = document.getElementById('admin-subcat-filter');
   optionsForLines(lineSel, { placeholder: 'Todas las líneas' });
   optionsForCategories(catSel, null, { placeholder: 'Todas las categorías' });
+  optionsForSubcategories(subSel, null, { placeholder: 'Todas las subcategorías' });
   lineSel.addEventListener('change', () => {
     lineFilter = lineSel.value;
     catFilter = 'all';
+    subcatFilter = 'all';
     optionsForCategories(catSel, lineFilter === 'all' ? null : lineFilter, { placeholder: 'Todas las categorías' });
+    optionsForSubcategories(subSel, null, { placeholder: 'Todas las subcategorías' });
     renderTable();
   });
-  catSel.addEventListener('change', () => { catFilter = catSel.value; renderTable(); });
+  catSel.addEventListener('change', () => {
+    catFilter = catSel.value;
+    subcatFilter = 'all';
+    optionsForSubcategories(subSel, catFilter === 'all' ? null : catFilter, { placeholder: 'Todas las subcategorías' });
+    renderTable();
+  });
+  subSel.addEventListener('change', () => { subcatFilter = subSel.value; renderTable(); });
 }
 
 function matchesFilters(p) {
   const lineOk = lineFilter === 'all' || p.product_line_id === lineFilter;
   const catOk = catFilter === 'all' || p.category_id === catFilter;
+  const subcatOk = subcatFilter === 'all' || p.subcategory_id === subcatFilter;
   const pubOk = !publishedOnly || p.published_online;
   const q = query.trim().toLowerCase();
-  const qOk = !q || p.name.toLowerCase().includes(q) || (p.code || '').toLowerCase().includes(q);
-  return lineOk && catOk && pubOk && qOk;
+  const qOk = !q || p.name.toLowerCase().includes(q) || (p.code || '').toLowerCase().includes(q) || (p.barcode || '').toLowerCase().includes(q);
+  return lineOk && catOk && subcatOk && pubOk && qOk;
 }
 
 // Costo is deliberately never in this list — it's sensitive data and
@@ -430,11 +457,15 @@ document.getElementById('export-pdf-generate').addEventListener('click', () => {
 
 function lineCategoryCellHtml(p, dis) {
   const cats = catsForLine(p.product_line_id);
+  const subs = subcatsForCategory(p.category_id);
   const lineOpts = LINES.map(l => `<option value="${l.id}" ${l.id === p.product_line_id ? 'selected' : ''}>${escapeHtml(l.name)}</option>`).join('');
   const catOpts = cats.map(c => `<option value="${c.id}" ${c.id === p.category_id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
+  const subOpts = `<option value="">Sin subcategoría</option>` +
+    subs.map(s => `<option value="${s.id}" ${s.id === p.subcategory_id ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
   return `
     <select class="cell-input" data-field="product_line_id" style="margin-bottom:4px;" ${dis}>${lineOpts}</select>
-    <select class="cell-input" data-field="category_id" ${dis}>${catOpts}</select>`;
+    <select class="cell-input" data-field="category_id" style="margin-bottom:4px;" ${dis}>${catOpts}</select>
+    <select class="cell-input" data-field="subcategory_id" ${dis}>${subOpts}</select>`;
 }
 
 function rowHtml(p) {
@@ -444,7 +475,10 @@ function rowHtml(p) {
   return `
     <tr data-id="${p.id}" class="${low ? 'low-stock' : ''}">
       <td style="min-width:180px;">${lineCategoryCellHtml(p, dis)}</td>
-      <td><input class="cell-input" data-field="code" value="${p.code ? escapeHtml(p.code) : ''}" placeholder="—" ${dis}></td>
+      <td style="min-width:120px;">
+        <input class="cell-input" data-field="code" value="${p.code ? escapeHtml(p.code) : ''}" placeholder="Clave" style="margin-bottom:4px;" ${dis}>
+        <input class="cell-input" data-field="barcode" value="${p.barcode ? escapeHtml(p.barcode) : ''}" placeholder="Código de barras" ${dis}>
+      </td>
       <td><input class="cell-input name-input" data-field="name" value="${escapeHtml(p.name)}" ${dis}></td>
       ${CURRENT_ROLE === 'admin' ? `<td><input class="cell-input" data-field="cost_price" type="number" min="0" step="0.01" value="${p.cost_price}"></td>` : ''}
       <td><input class="cell-input" data-field="price" type="number" min="0" step="0.01" value="${p.price}" ${dis}></td>
@@ -477,13 +511,21 @@ function renderTable() {
   tbody.querySelectorAll('tr[data-id]').forEach(row => {
     const lineSel = row.querySelector('[data-field="product_line_id"]');
     const catSel = row.querySelector('[data-field="category_id"]');
+    const subSel = row.querySelector('[data-field="subcategory_id"]');
     lineSel.addEventListener('change', async () => {
       const cats = catsForLine(lineSel.value);
       catSel.innerHTML = cats.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+      optionsForSubcategories(subSel, catSel.value);
       await saveField(row, 'product_line_id', lineSel.value);
       await saveField(row, 'category_id', catSel.value);
+      await saveField(row, 'subcategory_id', subSel.value || null);
     });
-    catSel.addEventListener('change', () => saveField(row, 'category_id', catSel.value));
+    catSel.addEventListener('change', async () => {
+      optionsForSubcategories(subSel, catSel.value);
+      await saveField(row, 'category_id', catSel.value);
+      await saveField(row, 'subcategory_id', subSel.value || null);
+    });
+    subSel.addEventListener('change', () => saveField(row, 'subcategory_id', subSel.value || null));
 
     row.querySelectorAll('input[data-field]').forEach(input => {
       if (input.type === 'checkbox') {
@@ -544,22 +586,29 @@ async function deleteProduct(id) {
 document.getElementById('add-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const code = document.getElementById('new-code').value.trim();
+  const barcode = document.getElementById('new-barcode').value.trim();
   const name = document.getElementById('new-name').value.trim();
   const product_line_id = document.getElementById('new-line').value;
   const category_id = document.getElementById('new-category').value;
+  const subcategory_id = document.getElementById('new-subcategory').value || null;
   const cost_price = Math.max(0, Number(document.getElementById('new-cost').value) || 0);
   const price = Math.max(0, Number(document.getElementById('new-price').value) || 0);
+  const suggestedRaw = document.getElementById('new-suggested-price').value;
+  const suggested_price = suggestedRaw === '' ? null : Math.max(0, Number(suggestedRaw) || 0);
   const stock_online = Math.max(0, Math.round(Number(document.getElementById('new-stock-online').value) || 0));
   const stock_fisica = Math.max(0, Math.round(Number(document.getElementById('new-stock-fisica').value) || 0));
   const published_online = document.getElementById('new-published').checked;
   if (!name || !product_line_id || !category_id) return;
 
   const { data, error } = await supabase.from('products')
-    .insert({ code, name, product_line_id, category_id, cost_price, price, stock_online, stock_fisica, published_online })
-    .select('id, code, name, product_line_id, category_id, price, stock_online, stock_fisica, published_online, created_at, updated_at')
+    .insert({
+      code, barcode: barcode || null, name, product_line_id, category_id, subcategory_id,
+      cost_price, price, suggested_price, stock_online, stock_fisica, published_online,
+    })
+    .select('id, code, barcode, name, product_line_id, category_id, subcategory_id, price, stock_online, stock_fisica, published_online, created_at, updated_at')
     .single();
   if (error) { showToast('No se pudo agregar el producto', true); console.error(error); return; }
-  PRODUCTS.push({ ...data, cost_price });
+  PRODUCTS.push({ ...data, cost_price, suggested_price });
   renderDashboard();
   renderTable();
   refreshTransferProductOptions();
@@ -780,7 +829,7 @@ document.getElementById('sell-search').addEventListener('input', (e) => {
   const list = document.getElementById('sell-suggestions');
   if (!q) { list.hidden = true; list.innerHTML = ''; return; }
 
-  const exact = PRODUCTS.find(p => (p.code || '').toLowerCase() === q);
+  const exact = PRODUCTS.find(p => (p.barcode || '').toLowerCase() === q || (p.code || '').toLowerCase() === q);
   const ambiguous = exact && PRODUCTS.some(p => {
     const c = (p.code || '').toLowerCase();
     return c !== q && c.startsWith(q);
@@ -800,7 +849,7 @@ document.getElementById('sell-search').addEventListener('keydown', (e) => {
   const raw = e.target.value.trim();
   if (!raw) return;
   const list = document.getElementById('sell-suggestions');
-  const exactOnEnter = PRODUCTS.find(p => (p.code || '').toLowerCase() === raw.toLowerCase());
+  const exactOnEnter = PRODUCTS.find(p => (p.barcode || '').toLowerCase() === raw.toLowerCase() || (p.code || '').toLowerCase() === raw.toLowerCase());
   if (exactOnEnter) {
     addToSellCart(exactOnEnter.id);
     e.target.value = '';
@@ -852,7 +901,7 @@ function applySellSaleModeVisibility() {
 
 function handleSellScanValue(raw) {
   const q = raw.trim().toLowerCase();
-  const match = PRODUCTS.find(p => (p.code || '').toLowerCase() === q);
+  const match = PRODUCTS.find(p => (p.barcode || '').toLowerCase() === q || (p.code || '').toLowerCase() === q);
   if (match) { addToSellCart(match.id); return; }
   showToast('Producto no encontrado', true);
 }
@@ -1503,7 +1552,7 @@ document.getElementById('count-search').addEventListener('input', (e) => {
   const list = document.getElementById('count-suggestions');
   if (!q) { list.hidden = true; list.innerHTML = ''; return; }
 
-  const exact = PRODUCTS.find(p => (p.code || '').toLowerCase() === q);
+  const exact = PRODUCTS.find(p => (p.barcode || '').toLowerCase() === q || (p.code || '').toLowerCase() === q);
   const ambiguous = exact && PRODUCTS.some(p => {
     const c = (p.code || '').toLowerCase();
     return c !== q && c.startsWith(q);
@@ -1523,7 +1572,7 @@ document.getElementById('count-search').addEventListener('keydown', (e) => {
   const raw = e.target.value.trim();
   if (!raw) return;
   const list = document.getElementById('count-suggestions');
-  const exactOnEnter = PRODUCTS.find(p => (p.code || '').toLowerCase() === raw.toLowerCase());
+  const exactOnEnter = PRODUCTS.find(p => (p.barcode || '').toLowerCase() === raw.toLowerCase() || (p.code || '').toLowerCase() === raw.toLowerCase());
   if (exactOnEnter) {
     addToCount(exactOnEnter.id);
     e.target.value = '';
@@ -1651,7 +1700,7 @@ if ('BarcodeDetector' in window) {
 
 function handleCountScanValue(raw) {
   const q = raw.trim().toLowerCase();
-  const match = PRODUCTS.find(p => (p.code || '').toLowerCase() === q);
+  const match = PRODUCTS.find(p => (p.barcode || '').toLowerCase() === q || (p.code || '').toLowerCase() === q);
   if (match) { addToCount(match.id); return; }
   showToast('Producto no encontrado', true);
 }
@@ -1971,6 +2020,27 @@ document.getElementById('category-form').addEventListener('submit', async (e) =>
   showToast(`Categoría "${name}" agregada`);
 });
 
+document.getElementById('subcat-line').addEventListener('change', () => {
+  optionsForCategories(document.getElementById('subcat-category'), document.getElementById('subcat-line').value);
+});
+
+document.getElementById('subcategory-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const catSel = document.getElementById('subcat-category');
+  const input = document.getElementById('subcat-name');
+  const name = input.value.trim();
+  const category_id = catSel.value;
+  if (!name || !category_id) return;
+  const { data, error } = await supabase.from('subcategories')
+    .insert({ category_id, name, sort_order: subcatsForCategory(category_id).length })
+    .select().single();
+  if (error) { showToast('No se pudo agregar la subcategoría', true); console.error(error); return; }
+  SUBCATEGORIES.push(data);
+  refreshAllLineDependentUI();
+  input.value = '';
+  showToast(`Subcategoría "${name}" agregada`);
+});
+
 function renderTaxonomy() {
   document.getElementById('lines-tbody').innerHTML = LINES.map(l => `
     <tr data-id="${l.id}">
@@ -2007,6 +2077,30 @@ function renderTaxonomy() {
       const { error } = await supabase.from('categories').delete().eq('id', id);
       if (error) { showToast('No se pudo eliminar: revisa que no tenga productos', true); return; }
       CATEGORIES = CATEGORIES.filter(c => c.id !== id);
+      refreshAllLineDependentUI();
+    });
+  });
+
+  document.getElementById('subcategories-tbody').innerHTML = SUBCATEGORIES.map(s => {
+    const cat = catById(s.category_id);
+    return `
+    <tr data-id="${s.id}">
+      <td>${escapeHtml(lineById(cat?.product_line_id)?.name || '')}</td>
+      <td>${escapeHtml(cat?.name || '')}</td>
+      <td>${escapeHtml(s.name)}</td>
+      <td><button class="icon-mini danger" data-role="subcat-delete" type="button" aria-label="Eliminar ${escapeHtml(s.name)}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+      </button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('subcategories-tbody').querySelectorAll('[data-role="subcat-delete"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('tr').dataset.id;
+      const sub = subcatById(id);
+      if (!confirm(`¿Eliminar la subcategoría "${sub.name}"? Solo se puede si no tiene productos.`)) return;
+      const { error } = await supabase.from('subcategories').delete().eq('id', id);
+      if (error) { showToast('No se pudo eliminar: revisa que no tenga productos', true); return; }
+      SUBCATEGORIES = SUBCATEGORIES.filter(s => s.id !== id);
       refreshAllLineDependentUI();
     });
   });
@@ -2053,9 +2147,13 @@ function renderSettings() {
 function refreshAllLineDependentUI() {
   optionsForLines(document.getElementById('new-line'));
   optionsForCategories(document.getElementById('new-category'), document.getElementById('new-line').value);
+  optionsForSubcategories(document.getElementById('new-subcategory'), document.getElementById('new-category').value);
   optionsForLines(document.getElementById('admin-line-filter'), { placeholder: 'Todas las líneas' });
   optionsForCategories(document.getElementById('admin-cat-filter'), lineFilter === 'all' ? null : lineFilter, { placeholder: 'Todas las categorías' });
+  optionsForSubcategories(document.getElementById('admin-subcat-filter'), catFilter === 'all' ? null : catFilter, { placeholder: 'Todas las subcategorías' });
   optionsForLines(document.getElementById('cat-line'));
+  optionsForLines(document.getElementById('subcat-line'));
+  optionsForCategories(document.getElementById('subcat-category'), document.getElementById('subcat-line').value);
   refreshPromoScopeTarget();
   renderTaxonomy();
   renderTable();
@@ -2413,9 +2511,10 @@ async function reloadProducts() {
 
 async function loadEverything() {
   try {
-    const [lines, cats] = await Promise.all([loadProductLines(), loadCategories()]);
+    const [lines, cats, subcats] = await Promise.all([loadProductLines(), loadCategories(), loadSubcategories()]);
     LINES = lines;
     CATEGORIES = cats;
+    SUBCATEGORIES = subcats;
     try {
       SITE_SETTINGS = await loadSiteSettings();
     } catch (err) {
@@ -2445,6 +2544,8 @@ async function loadEverything() {
     initInventoryFilters();
     refreshPromoScopeTarget();
     optionsForLines(document.getElementById('cat-line'));
+    optionsForLines(document.getElementById('subcat-line'));
+    optionsForCategories(document.getElementById('subcat-category'), document.getElementById('subcat-line').value);
     refreshTransferProductOptions();
     refreshLayawayProductOptions();
 

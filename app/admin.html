@@ -193,8 +193,16 @@
         <select class="cell-input" id="new-category" required></select>
       </div>
       <div class="field">
-        <label for="new-code">Código</label>
+        <label for="new-subcategory">Subcategoría</label>
+        <select class="cell-input" id="new-subcategory"></select>
+      </div>
+      <div class="field">
+        <label for="new-code">Clave</label>
         <input class="cell-input" id="new-code" type="text" placeholder="Opcional">
+      </div>
+      <div class="field">
+        <label for="new-barcode">Código de barras</label>
+        <input class="cell-input" id="new-barcode" type="text" placeholder="Opcional, para escanear">
       </div>
       <div class="field" style="grid-column: span 2;">
         <label for="new-name">Nombre</label>
@@ -207,6 +215,10 @@
       <div class="field">
         <label for="new-price">Precio venta (MXN)</label>
         <input class="cell-input" id="new-price" type="number" min="0" step="0.01" required>
+      </div>
+      <div class="field">
+        <label for="new-suggested-price">Precio sugerido (opcional)</label>
+        <input class="cell-input" id="new-suggested-price" type="number" min="0" step="0.01" placeholder="Solo referencia interna">
       </div>
       <div class="field">
         <label for="new-stock-online">Stock online</label>
@@ -236,6 +248,9 @@
       </select>
       <select class="cell-input" id="admin-cat-filter" style="max-width:200px;border-color:var(--line);background:var(--panel);">
         <option value="all">Todas las categorías</option>
+      </select>
+      <select class="cell-input" id="admin-subcat-filter" style="max-width:200px;border-color:var(--line);background:var(--panel);">
+        <option value="all">Todas las subcategorías</option>
       </select>
       <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;color:var(--ink-soft);">
         <input type="checkbox" id="admin-published-filter" style="width:auto;"> Solo publicados
@@ -270,8 +285,8 @@
       <table class="admin-table">
         <thead>
           <tr>
-            <th>Línea / Categoría</th>
-            <th>Código</th>
+            <th>Línea / Categoría / Subcategoría</th>
+            <th>Clave / Código de barras</th>
             <th>Nombre</th>
             <th id="col-cost-header">Costo</th>
             <th>Precio</th>
@@ -648,10 +663,33 @@
       </div>
       <div class="submit-cell"><button class="btn btn-primary btn-sm" type="submit">Agregar</button></div>
     </form>
-    <div class="table-wrap">
+    <div class="table-wrap" style="margin-bottom:32px;">
       <table class="admin-table">
         <thead><tr><th>Línea</th><th>Categoría</th><th></th></tr></thead>
         <tbody id="categories-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="grid-head"><h2>Subcategorías</h2></div>
+    <form class="add-form" id="subcategory-form">
+      <div class="field">
+        <label for="subcat-line">Línea</label>
+        <select class="cell-input" id="subcat-line" required></select>
+      </div>
+      <div class="field">
+        <label for="subcat-category">Categoría</label>
+        <select class="cell-input" id="subcat-category" required></select>
+      </div>
+      <div class="field">
+        <label for="subcat-name">Nueva subcategoría</label>
+        <input class="cell-input" id="subcat-name" type="text" placeholder="Ej. Mochilas" required>
+      </div>
+      <div class="submit-cell"><button class="btn btn-primary btn-sm" type="submit">Agregar</button></div>
+    </form>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>Línea</th><th>Categoría</th><th>Subcategoría</th><th></th></tr></thead>
+        <tbody id="subcategories-tbody"></tbody>
       </table>
     </div>
   </section>
