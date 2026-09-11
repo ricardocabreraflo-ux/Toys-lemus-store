@@ -414,6 +414,8 @@ select.cell-input { appearance: none; cursor: pointer; }
 .field label { font-size: 0.8rem; font-weight: 700; color: var(--ink-soft); }
 .field input { border: 2px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit; background: var(--bg); color: var(--ink); transition: border-color 0.12s ease; }
 .field input:focus { outline: none; border-color: var(--accent); }
+.field select { border: 2px solid var(--line); border-radius: 10px; padding: 10px 32px 10px 12px; font: inherit; background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 8px center / 18px; color: var(--ink); cursor: pointer; transition: border-color 0.12s ease; }
+.field select:focus { outline: none; border-color: var(--accent); }
 .form-error { color: var(--stock-low); font-size: 0.85rem; min-height: 1.2em; }
 .add-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; background: var(--panel); border: 2px solid var(--line); border-radius: 16px; padding: 18px; margin-bottom: 18px; box-shadow: var(--shadow); }
 .add-form[hidden] { display: none; }
