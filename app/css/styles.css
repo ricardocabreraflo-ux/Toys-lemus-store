@@ -303,6 +303,22 @@ footer { border-top: 3px solid var(--ink); padding: 34px 24px 40px; background: 
 .more-sheet[hidden] { display: none; }
 .more-sheet-head { display: flex; align-items: center; justify-content: space-between; font-family: 'Baloo 2'; font-size: 1.05rem; padding: 4px 6px 10px; }
 
+.sell-sheet-option {
+  display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+  border: none; background: none; cursor: pointer; padding: 10px 6px; border-radius: 14px;
+  transition: background 0.12s ease;
+}
+.sell-sheet-option:hover, .sell-sheet-option:focus-visible { background: var(--bg-alt); outline: none; }
+.sell-sheet-option .opt-icon {
+  width: 48px; height: 48px; border-radius: 14px; flex: none; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--c, var(--accent)) 22%, var(--bg));
+}
+.sell-sheet-option .opt-icon svg { width: 24px; height: 24px; stroke: var(--c, var(--accent)); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.sell-sheet-option .opt-body { flex: 1; min-width: 0; }
+.sell-sheet-option .opt-body strong { display: block; font-family: 'Baloo 2'; font-size: 1rem; }
+.sell-sheet-option .opt-body span { display: block; font-size: 0.82rem; color: var(--ink-soft); margin-top: 2px; }
+.sell-sheet-option .opt-chevron { flex: none; width: 20px; height: 20px; color: var(--ink-soft); stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
 @media (max-width: 640px) {
   .admin-shell { flex-direction: column; padding: 16px 16px 104px; gap: 0; }
   .admin-sidebar { display: none; }
