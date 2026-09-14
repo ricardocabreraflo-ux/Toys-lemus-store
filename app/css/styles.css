@@ -205,6 +205,12 @@ main { padding: 40px 0 100px; }
 .card-art svg { width: 46%; height: 46%; color: var(--c, var(--accent)); filter: drop-shadow(0 6px 10px rgba(0,0,0,0.15)); }
 .card-art .ring { position: absolute; width: 130%; height: 130%; border-radius: 50%; border: 2px dashed color-mix(in srgb, var(--c, var(--accent)) 45%, transparent); opacity: 0.5; }
 .badge-stock { position: absolute; top: 10px; left: 10px; background: var(--stock-low-bg); color: var(--stock-low); font-size: 0.7rem; font-weight: 700; padding: 4px 9px; border-radius: 999px; border: 1.5px solid color-mix(in srgb, var(--stock-low) 40%, transparent); }
+.badge-stock.out { background: var(--panel); color: var(--ink-soft); border-color: var(--line); }
+.card.out-of-stock { opacity: 0.6; }
+.card.out-of-stock:hover { transform: none; box-shadow: var(--shadow); border-color: var(--line); }
+.card.out-of-stock .card-art { filter: grayscale(0.6); }
+.add-btn:disabled { background: var(--panel); color: var(--ink-soft); border-color: var(--line); cursor: not-allowed; }
+.add-btn:disabled:hover, .add-btn:disabled:active { transform: none; }
 .badge-code { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.85); color: var(--ink); font-size: 0.66rem; font-weight: 700; padding: 4px 8px; border-radius: 999px; font-family: 'Karla', monospace; letter-spacing: 0.02em; }
 :root[data-theme="dark"] .badge-code { background: rgba(0,0,0,0.5); }
 @media (prefers-color-scheme: dark) { .badge-code { background: rgba(0,0,0,0.5); } }

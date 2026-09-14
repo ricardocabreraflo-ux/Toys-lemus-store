@@ -90,18 +90,23 @@ function matches(p) {
 function cardHtml(p, pos) {
   const c = accentFor(p.category_id);
   const icon = iconKeyFor(p.category_id);
-  const low = p.stock_online <= 1;
+  const outOfStock = p.stock_online <= 0;
   const staggerPos = Math.min(pos, 11);
   const { price, promo } = discountedPrice(p, PROMOTIONS);
   const priceHtml = promo
     ? `<span class="price">${fmt.format(price)}<sup> MXN</sup></span> <span class="price-was">${fmt.format(p.price)}</span> <span class="promo-badge">-${promo.discount_percent}%</span>`
     : `<span class="price">${fmt.format(price)}<sup> MXN</sup></span>`;
+  const stockBadge = outOfStock
+    ? '<span class="badge-stock out">Agotado</span>'
+    : p.stock_online === 1
+      ? '<span class="badge-stock">Última pieza</span>'
+      : (p.stock_online <= 2 ? `<span class="badge-stock">Quedan ${p.stock_online}</span>` : '');
   return `
-    <article class="card" style="--c:${c}; --i:${staggerPos}">
+    <article class="card${outOfStock ? ' out-of-stock' : ''}" style="--c:${c}; --i:${staggerPos}">
       <div class="card-art">
         <span class="ring"></span>
         ${iconSvg(icon, 'stroke-width="1.6"')}
-        ${low ? '<span class="badge-stock">Última pieza</span>' : (p.stock_online <= 2 ? `<span class="badge-stock">Quedan ${p.stock_online}</span>` : '')}
+        ${stockBadge}
         ${p.code ? `<span class="badge-code">#${p.code}</span>` : ''}
       </div>
       <div class="card-body">
@@ -109,7 +114,7 @@ function cardHtml(p, pos) {
         <h3 class="card-name">${p.name}</h3>
         <div class="card-foot">
           <span class="price-wrap">${priceHtml}</span>
-          <button class="add-btn" type="button" data-id="${p.id}" ${p.stock_online <= 0 ? 'disabled' : ''} aria-label="Agregar ${p.name} al carrito">
+          <button class="add-btn" type="button" data-id="${p.id}" ${outOfStock ? 'disabled' : ''} aria-label="Agregar ${p.name} al carrito">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
           </button>
         </div>
@@ -407,7 +412,7 @@ function initStats() {
   document.getElementById('stat-products-wrap').hidden = !SITE_SETTINGS.show_products_stat;
   document.getElementById('stat-products').textContent = PRODUCTS.length;
   document.getElementById('stat-cats').textContent = LINES.length;
-  document.getElementById('stat-low').textContent = PRODUCTS.filter(p => p.stock_online <= 1).length;
+  document.getElementById('stat-low').textContent = PRODUCTS.filter(p => p.stock_online === 1).length;
 }
 
 function isPromoVisible(promo, { visibleLineIds, categories, productsData }) {
