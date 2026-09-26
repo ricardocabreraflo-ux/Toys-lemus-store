@@ -368,6 +368,9 @@ footer { border-top: 3px solid var(--ink); padding: 34px 24px 40px; background: 
   table.admin-table { font-size: 0.82rem; }
   .table-wrap-wide table.admin-table { min-width: 560px; }
   .table-wrap:not(.table-wrap-wide) table.admin-table { table-layout: fixed; }
+  .table-wrap:not(.table-wrap-wide) th:empty { width: 40px; }
+  .table-wrap:not(.table-wrap-wide) td:has(> .icon-mini) { padding-left: 4px; padding-right: 4px; }
+  .table-wrap:not(.table-wrap-wide) .admin-table th { font-size: 0.58rem; letter-spacing: 0; }
   .admin-table th, .admin-table td { padding: 8px 8px; overflow-wrap: break-word; word-break: break-word; }
 }
 .dash-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; }
@@ -433,6 +436,9 @@ select.cell-input { appearance: none; cursor: pointer; }
 .add-form .submit-cell { display: flex; align-items: flex-end; }
 
 .autocomplete-wrap { position: relative; margin-top: 6px; }
+.autocomplete-wrap input.cell-input { border-color: var(--line); background: var(--panel); border-radius: 999px; padding: 11px 18px; box-shadow: var(--shadow); }
+.autocomplete-wrap input.cell-input:hover { background: var(--panel); }
+.autocomplete-wrap input.cell-input:focus { border-color: var(--accent); background: var(--panel); }
 .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; z-index: 20; background: var(--panel); border: 2px solid var(--line); border-radius: 10px; margin-top: 4px; max-height: 220px; overflow-y: auto; box-shadow: var(--shadow); }
 .autocomplete-list[hidden] { display: none; }
 .autocomplete-item { display: block; width: 100%; text-align: left; padding: 8px 12px; border: none; background: transparent; color: var(--ink); font: inherit; cursor: pointer; }

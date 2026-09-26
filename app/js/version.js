@@ -5,4 +5,4 @@
 // Keep this in sync with CACHE_NAME in ../sw.js — both must change together so
 // the "Actualizar" banner fires and the version shown in Ajustes / el pie de
 // página always matches what's actually running.
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.0.1';
