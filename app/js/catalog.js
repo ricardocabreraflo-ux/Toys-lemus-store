@@ -3,8 +3,11 @@ import { loadProductLines, loadCategories, loadActivePromotions, loadUpcomingPro
 import { iconSvg } from './icons.js';
 import { applyAutoTheme } from './theme.js';
 import { registerServiceWorkerWithUpdatePrompt } from './pwa-update.js';
+import { APP_VERSION } from './version.js';
 
 registerServiceWorkerWithUpdatePrompt();
+
+document.getElementById('app-version').textContent = APP_VERSION;
 
 let PRODUCTS = [];
 let LINES = [];

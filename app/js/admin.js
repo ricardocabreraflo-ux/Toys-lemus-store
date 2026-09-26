@@ -2,8 +2,11 @@ import { supabase, fmt } from './supabase-client.js';
 import { loadProductLines, loadCategories, loadSubcategories, loadSizes, loadSiteSettings } from './catalog-data.js';
 import { initThemeToggle } from './theme.js';
 import { registerServiceWorkerWithUpdatePrompt } from './pwa-update.js';
+import { APP_VERSION } from './version.js';
 
 registerServiceWorkerWithUpdatePrompt();
+
+document.getElementById('app-version').textContent = APP_VERSION;
 
 let LINES = [];
 let CATEGORIES = [];

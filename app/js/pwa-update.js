@@ -31,6 +31,20 @@ export function registerServiceWorkerWithUpdatePrompt() {
           }
         });
       });
+
+      // A browser only auto-checks for a new sw.js on navigation, throttled
+      // to roughly once a day — useless for someone who leaves the app open
+      // all shift (exactly this app's main use case, as a POS). Ask for
+      // ourselves instead: right away, whenever the tab regains focus (e.g.
+      // switching back to the app on the phone), and every few minutes
+      // while it stays open, so "Actualizar" shows up without ever having
+      // to close and reopen the app.
+      const checkForUpdate = () => registration.update().catch(() => {});
+      checkForUpdate();
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') checkForUpdate();
+      });
+      setInterval(checkForUpdate, 5 * 60 * 1000);
     }).catch(() => {});
   });
 }

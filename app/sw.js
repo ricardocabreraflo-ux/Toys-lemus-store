@@ -1,4 +1,7 @@
-const CACHE_NAME = 'lemus-shell-v8';
+// Bump on every deploy that ships a user-visible change — keep in sync with
+// APP_VERSION in js/version.js. Changing this string is what makes the
+// browser detect a new service worker and offer the "Actualizar" banner.
+const CACHE_NAME = 'lemus-shell-v1.0.0';
 
 const SHELL_URLS = [
   '/index.html',
@@ -15,6 +18,7 @@ const SHELL_URLS = [
   '/js/pwa-update.js',
   '/js/supabase-client.js',
   '/js/theme.js',
+  '/js/version.js',
   '/js/vendor/supabase.umd.js',
   '/fonts/Baloo2-700.ttf',
   '/fonts/Karla-400.ttf',
