@@ -1,3 +1,5 @@
+import { STORE_TIMEZONE } from './time.js';
+
 const root = document.documentElement;
 
 function paintIcon() {
@@ -18,7 +20,7 @@ function paintIcon() {
 // manual preference stored under the same 'lemus-theme' key.
 export function applyAutoTheme() {
   const hour = Number(new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Mexico_City',
+    timeZone: STORE_TIMEZONE,
     hour: 'numeric',
     hour12: false,
   }).format(new Date()));

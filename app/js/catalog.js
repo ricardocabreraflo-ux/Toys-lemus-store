@@ -4,6 +4,7 @@ import { iconSvg } from './icons.js';
 import { applyAutoTheme } from './theme.js';
 import { registerServiceWorkerWithUpdatePrompt } from './pwa-update.js';
 import { APP_VERSION } from './version.js';
+import { STORE_TIMEZONE } from './time.js';
 
 registerServiceWorkerWithUpdatePrompt();
 
@@ -197,7 +198,7 @@ function renderPromoBanner() {
 }
 
 function upcomingPromoText(promo) {
-  const dateLabel = new Date(promo.starts_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+  const dateLabel = new Date(promo.starts_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', timeZone: STORE_TIMEZONE });
   if (promo.scope_type === 'product') {
     const product = findProduct(promo.product_id);
     if (!product) return '';

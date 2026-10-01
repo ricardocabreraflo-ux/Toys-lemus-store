@@ -1,0 +1,11 @@
+-- supabase/migrations/0028_timezone_cdmx.sql
+-- La base de datos no tenía ninguna zona horaria configurada (usaba el
+-- default de Supabase, UTC). Eso no afecta los timestamptz guardados
+-- (siempre son un instante absoluto), pero sí a funciones como
+-- current_date / now()::date: current_date + 15 (usado para la fecha
+-- límite de apartados) tomaba el día calendario en UTC, que ya es el
+-- día siguiente durante las últimas horas de la noche en Ciudad de
+-- México. Se fija la zona horaria de la base de datos a la de la
+-- tienda para que current_date y cualquier cálculo de "hoy" en
+-- Postgres coincida con el día calendario real en CDMX.
+alter database postgres set timezone to 'America/Mexico_City';

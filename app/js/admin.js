@@ -3,6 +3,10 @@ import { loadProductLines, loadCategories, loadSubcategories, loadSizes, loadSit
 import { initThemeToggle } from './theme.js';
 import { registerServiceWorkerWithUpdatePrompt } from './pwa-update.js';
 import { APP_VERSION } from './version.js';
+import {
+  STORE_TIMEZONE, storeDateKey, storeStartOfDayUtc, storeStartOfWeekUtc, storeStartOfMonthUtc,
+  dateOnlyToUtcMidnight, storeTodayAsUtcMidnight, storeDayRangeUtc,
+} from './time.js';
 
 registerServiceWorkerWithUpdatePrompt();
 
@@ -310,18 +314,12 @@ function matchByIdentifier(p, q) {
 
 // ---------- Stats ----------
 
-function startOfWeek(d) {
-  const day = d.getDay(); // 0=domingo..6=sábado
-  const diff = day === 0 ? -6 : 1 - day; // semana empieza en lunes
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
-}
-
 function renderDashboard() {
   const isAdmin = CURRENT_ROLE === 'admin';
   const outOfStock = PRODUCTS.filter(p => p.stock_online === 0).length;
   const lowStock = PRODUCTS.filter(p => p.stock_online === 1).length;
   const pendingOrders = ORDERS.filter(o => o.status === 'pagado' || o.status === 'revisar_sin_stock').length;
-  const today = new Date(new Date().toDateString());
+  const today = storeTodayAsUtcMidnight();
   const dueTodayLayaways = LAYAWAYS.filter(l =>
     (l.status === 'activo' || l.status === 'revisar_sin_stock') && layawayDueDate(l).getTime() === today.getTime()
   ).length;
@@ -330,10 +328,10 @@ function renderDashboard() {
 
   const statsEl = document.getElementById('dash-stats');
   if (isAdmin) {
-    const todayStr = new Date().toDateString();
-    const weekStart = startOfWeek(new Date());
+    const todayKey = storeDateKey();
+    const weekStart = storeStartOfWeekUtc();
     const soldToday = SALES_REPORT_SALES
-      .filter(s => new Date(s.created_at).toDateString() === todayStr)
+      .filter(s => storeDateKey(new Date(s.created_at)) === todayKey)
       .reduce((s, r) => s + Number(r.total), 0);
     const soldWeek = SALES_REPORT_SALES
       .filter(s => new Date(s.created_at) >= weekStart)
@@ -352,16 +350,16 @@ function renderDashboard() {
 
   document.getElementById('dash-chart-card').hidden = !isAdmin;
   if (isAdmin) {
-    const weekStart = startOfWeek(new Date());
+    const weekStart = storeStartOfWeekUtc();
     const dayTotals = [0, 0, 0, 0, 0, 0, 0];
     SALES_REPORT_SALES.forEach(s => {
-      const d = new Date(new Date(s.created_at).toDateString());
+      const d = storeStartOfDayUtc(new Date(s.created_at));
       const diffDays = Math.round((d - weekStart) / 86400000);
       if (diffDays >= 0 && diffDays < 7) dayTotals[diffDays] += Number(s.total);
     });
     const max = Math.max(1, ...dayTotals);
     const dayLetters = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-    const todayIdx = Math.round((today - weekStart) / 86400000);
+    const todayIdx = Math.round((storeStartOfDayUtc() - weekStart) / 86400000);
     const maxBarPx = 118;
     document.getElementById('dash-bars').innerHTML = dayTotals
       .map((v, i) => `
@@ -483,7 +481,7 @@ document.getElementById('export-pdf-generate').addEventListener('click', () => {
 
   document.getElementById('print-inventory').innerHTML = `
     <h1>Inventario — Lemus Store</h1>
-    <p>${new Date().toLocaleDateString('es-MX', { dateStyle: 'long' })}</p>
+    <p>${new Date().toLocaleDateString('es-MX', { dateStyle: 'long', timeZone: STORE_TIMEZONE })}</p>
     <table>
       <thead><tr>${headerCells}</tr></thead>
       <tbody>${bodyRows}</tbody>
@@ -815,7 +813,7 @@ function renderSellConfirm() {
 }
 
 async function loadVenderToday() {
-  const startOfToday = new Date(new Date().toDateString()).toISOString();
+  const startOfToday = storeStartOfDayUtc().toISOString();
   const { data: sales, error: salesErr } = await supabase
     .from('sales')
     .select('id, total')
@@ -1117,15 +1115,14 @@ document.getElementById('sell-confirm-history-btn').addEventListener('click', ()
 document.getElementById('sell-history-back-btn').addEventListener('click', () => setSellView('home'));
 
 function todayDateStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return storeDateKey();
 }
 
 let SELL_HISTORY_ROWS = [];
 
 async function loadPhysicalSalesRange(fromStr, toStr) {
-  const fromISO = new Date(`${fromStr}T00:00:00`).toISOString();
-  const toISO = new Date(`${toStr}T23:59:59.999`).toISOString();
+  const fromISO = storeDayRangeUtc(fromStr).startUtc.toISOString();
+  const toISO = storeDayRangeUtc(toStr).endUtc.toISOString();
   const { data, error } = await supabase
     .from('sales')
     .select('id, total, created_at')
@@ -1145,7 +1142,7 @@ function renderSellHistory() {
     ? `<tr><td colspan="3" style="color:var(--ink-soft);">Sin ventas físicas en este rango.</td></tr>`
     : SELL_HISTORY_ROWS.map(s => `
       <tr data-id="${s.id}">
-        <td>${new Date(s.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+        <td>${new Date(s.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short', timeZone: STORE_TIMEZONE })}</td>
         <td>${fmt.format(s.total)}</td>
         <td>
           ${CURRENT_ROLE === 'admin' ? `<button class="icon-mini danger" data-role="sale-delete" type="button" aria-label="Eliminar venta">
@@ -1221,7 +1218,7 @@ function renderOrders() {
     ? `<tr><td colspan="6" style="color:var(--ink-soft);">Sin pedidos pendientes.</td></tr>`
     : pending.map(o => `
       <tr data-id="${o.id}" class="${o.status === 'revisar_sin_stock' ? 'low-stock' : ''}">
-        <td>${new Date(o.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+        <td>${new Date(o.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short', timeZone: STORE_TIMEZONE })}</td>
         <td>${escapeHtml(o.customer_name || '—')}</td>
         <td>${escapeHtml(o.customer_phone || '—')}</td>
         <td>${fmt.format(o.total)}</td>
@@ -1263,11 +1260,11 @@ function renderOrders() {
     ? `<tr><td colspan="6" style="color:var(--ink-soft);">Sin entregas todavía.</td></tr>`
     : delivered.map(o => `
       <tr data-id="${o.id}">
-        <td>${new Date(o.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+        <td>${new Date(o.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short', timeZone: STORE_TIMEZONE })}</td>
         <td>${escapeHtml(o.customer_name || '—')}</td>
         <td>${escapeHtml(o.customer_phone || '—')}</td>
         <td>${fmt.format(o.total)}</td>
-        <td>${o.delivered_at ? new Date(o.delivered_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</td>
+        <td>${o.delivered_at ? new Date(o.delivered_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short', timeZone: STORE_TIMEZONE }) : '—'}</td>
         <td>
           ${CURRENT_ROLE === 'admin' ? `<button class="icon-mini danger" data-role="order-delete" type="button" aria-label="Eliminar pedido">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
@@ -1398,12 +1395,11 @@ function layawayPaidSoFar(l) {
 }
 
 function layawayDueDate(l) {
-  const [y, m, d] = String(l.due_date).split('-').map(Number);
-  return new Date(y, m - 1, d);
+  return dateOnlyToUtcMidnight(l.due_date);
 }
 
 function layawayIsOverdue(l) {
-  return layawayDueDate(l) < new Date(new Date().toDateString());
+  return layawayDueDate(l) < storeTodayAsUtcMidnight();
 }
 
 function layawayStatusLabel(l) {
@@ -1425,7 +1421,7 @@ function renderLayaways() {
       const pending = Number(l.total) - paid;
       const flagged = layawayIsOverdue(l) || l.status === 'revisar_sin_stock';
       return `<tr data-id="${l.id}" class="${flagged ? 'low-stock' : ''}">
-        <td>${layawayDueDate(l).toLocaleDateString('es-MX', { dateStyle: 'medium' })}</td>
+        <td>${layawayDueDate(l).toLocaleDateString('es-MX', { dateStyle: 'medium', timeZone: 'UTC' })}</td>
         <td>${escapeHtml(l.customer_name)}</td>
         <td>${escapeHtml(l.customer_phone)}</td>
         <td>${fmt.format(l.total)}</td>
@@ -1505,7 +1501,7 @@ function renderLayaways() {
     ? `<tr><td colspan="4" style="color:var(--ink-soft);">Sin historial todavía.</td></tr>`
     : history.map(l => `
       <tr>
-        <td>${layawayDueDate(l).toLocaleDateString('es-MX', { dateStyle: 'medium' })}</td>
+        <td>${layawayDueDate(l).toLocaleDateString('es-MX', { dateStyle: 'medium', timeZone: 'UTC' })}</td>
         <td>${escapeHtml(l.customer_name)}</td>
         <td>${fmt.format(l.total)}</td>
         <td>${l.status === 'completado' ? 'Completado' : 'Cancelado'}</td>
@@ -1569,7 +1565,7 @@ function renderTransfers() {
   }
   tbody.innerHTML = TRANSFERS.map(t => `
     <tr>
-      <td>${new Date(t.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+      <td>${new Date(t.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short', timeZone: STORE_TIMEZONE })}</td>
       <td>${t.products ? escapeHtml(t.products.name) : '—'}</td>
       <td>${locationLabel(t.from_location)} → ${locationLabel(t.to_location)}</td>
       <td>${t.quantity}</td>
@@ -1995,8 +1991,8 @@ function promoScopeLabel(p) {
 }
 
 function promoVigenciaLabel(p) {
-  const start = p.starts_at ? new Date(p.starts_at).toLocaleDateString('es-MX') : null;
-  const end = p.ends_at ? new Date(p.ends_at).toLocaleDateString('es-MX') : null;
+  const start = p.starts_at ? new Date(p.starts_at).toLocaleDateString('es-MX', { timeZone: STORE_TIMEZONE }) : null;
+  const end = p.ends_at ? new Date(p.ends_at).toLocaleDateString('es-MX', { timeZone: STORE_TIMEZONE }) : null;
   if (!start && !end) return 'Sin límite';
   if (start && end) return `${start} – ${end}`;
   return start ? `Desde ${start}` : `Hasta ${end}`;
@@ -2321,7 +2317,7 @@ async function renderSalesReport() {
 
   const byMonth = new Map(); // 'YYYY-MM' -> { count, pieces, total, cost }
   sales.forEach(s => {
-    const month = s.created_at.slice(0, 7);
+    const month = storeDateKey(new Date(s.created_at)).slice(0, 7);
     const entry = byMonth.get(month) || { count: 0, pieces: 0, total: 0, cost: 0 };
     entry.count += 1;
     entry.total += Number(s.total);
@@ -2359,7 +2355,7 @@ function renderSalesDetailReport() {
   const period = document.getElementById('report-period-filter').value;
   const saleIds = new Set(
     SALES_REPORT_SALES
-      .filter(s => period === 'all' || s.created_at.slice(0, 7) === period)
+      .filter(s => period === 'all' || storeDateKey(new Date(s.created_at)).slice(0, 7) === period)
       .map(s => s.id)
   );
 
@@ -2414,8 +2410,7 @@ function renderSalesDetailReport() {
 // ---------- Finanzas tab ----------
 
 async function computeCurrentMonthMargin() {
-  const now = new Date();
-  const startOfMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01T00:00:00Z`;
+  const startOfMonth = storeStartOfMonthUtc().toISOString();
   const { data: sales, error: salesErr } = await supabase
     .from('sales')
     .select('id, total, status')
@@ -2563,7 +2558,7 @@ function renderUsers() {
     tbody.innerHTML = VENDEDORES.map(v => `
     <tr>
       <td>${escapeHtml(v.email)}</td>
-      <td>${new Date(v.created_at).toLocaleDateString('es-MX')}</td>
+      <td>${new Date(v.created_at).toLocaleDateString('es-MX', { timeZone: STORE_TIMEZONE })}</td>
     </tr>`).join('');
   }
 
